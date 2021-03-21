@@ -6,8 +6,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 import pc_util
+import tools
 
-DUMP_CONF_THRESH = 0.5 # Dump grasps with grasp prob larger than that.
+DUMP_CONF_THRESH = 0.5 # Dump poses with object prob larger than that.
 
 def softmax(x):
     ''' Numpy function for softmax'''
@@ -33,23 +34,17 @@ def dump_results(end_points, dump_dir, config, inference_switch=False):
         aggregated_vote_object_xyz = end_points['aggregated_vote_object_xyz'].detach().cpu().numpy()
     objectness_scores = end_points['objectness_scores'].detach().cpu().numpy() # (B,K,2)
     pred_center = end_points['center'].detach().cpu().numpy() # (B,K,3)
-    pred_angle_class = torch.argmax(end_points['angle_scores'], -1) # B,num_proposal
-    pred_angle_residual = torch.gather(end_points['angle_residuals'], 2, pred_angle_class.unsqueeze(-1)) # B,num_proposal,1
-    pred_angle_class = pred_angle_class.detach().cpu().numpy() # B,num_proposal
-    pred_angle_residual = pred_angle_residual.squeeze(2).detach().cpu().numpy() # B,num_proposal
-    pred_viewpoint_class = torch.argmax(end_points['viewpoint_scores'], -1) # B,num_proposal
-    pred_sem_cls = torch.argmax(end_points['sem_cls_scores'], -1) # B,num_proposal
-
-    pred_quality = end_points['quality'].detach().cpu().numpy() # B,num_proposal
-    pred_width = end_points['width'].detach().cpu().numpy() # B,num_proposal
+    pred_rot = end_points['rot_6d'] # (B,K,3)
+    predict_rot = pred_rot.reshape(pred_rot.shape[0]*pred_rot.shape[1], pred_rot.shape[2])
+    predict_rmat = tools.compute_rotation_matrix_from_ortho6d(predict_rot)
+    predict_rmat = predict_rmat.reshape(pred_rot.shape[0], pred_rot.shape[1], 9)
 
     # OTHERS
     #pred_mask = end_points['pred_mask'] # B,num_proposal
     idx_beg = 0
 
-    save_grasp_file = os.path.join(dump_dir, 'pred_grasps.txt')
-    f = open(save_grasp_file, "w")
-    f.write("object x y z viewpoint angle quality width\n")
+    save_pose_file = os.path.join(dump_dir, 'pred_poses.txt')
+    f = open(save_pose_file, "w")
 
     for i in range(batch_size):
         pc = point_clouds[i,:,:]
@@ -65,18 +60,24 @@ def dump_results(end_points, dump_dir, config, inference_switch=False):
         if np.sum(objectness_prob>DUMP_CONF_THRESH)>0:
             pc_util.write_ply(pred_center[i,objectness_prob>DUMP_CONF_THRESH,0:3], os.path.join(dump_dir, '%06d_confident_proposal_pc.ply'%(idx_beg+i)))
 
-        # Dump predicted grasps
+        # Dump predicted poses
         if np.sum(objectness_prob>DUMP_CONF_THRESH)>0:
             num_proposal = pred_center.shape[1]
             for j in range(num_proposal):
-                grasp = config.param2grasp(pred_sem_cls[i,j], pred_center[i,j,0:3], pred_viewpoint_class[i,j],
-                            pred_angle_class[i,j], pred_angle_residual[i,j], pred_quality[i,j,0], pred_width[i,j,0])
-                f.write(grasp[0])
-                f.write(' ')             
-                for ite in grasp[1:]:
+                loc = pred_center[i,j,0:3]
+                for ite in loc:
                     str_num = '{:.6f}'.format(ite)
                     f.write(str_num)
                     f.write(' ')
                 f.write("\n")
 
+            for j in range(num_proposal):
+                rmat = predict_rmat[i,j,0:9]
+                for ind, ite in rmat:
+                    str_num = '{:.6f}'.format(ite)
+                    f.write(str_num)
+                    if (ind+1)%3==0:
+                        f.write('\n')
+                    else:
+                        f.write(' ')
     f.close()

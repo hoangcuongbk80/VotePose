@@ -146,14 +146,14 @@ def compute_rot_loss(end_points, config):
     predict_rmat = tools.compute_rotation_matrix_from_ortho6d(predict_rot)
     predict_rmat = predict_rmat.reshape(pred_rot.shape[0], pred_rot.shape[1], 9)
 
-    gt_rot = end_points['center_label'][:,:,0:3]
+    gt_rot = end_points['rot_label'][:,:,0:3]
     gt_rott = gt_rot.reshape(gt_rot.shape[0]*gt_rot.shape[1], gt_rot.shape[2])
     gt_rmat = tools.compute_rotation_matrix_from_euler(gt_rott)
     gt_rmat = gt_rmat.reshape(gt_rot.shape[0], gt_rot.shape[1], 9)
 
     dist1, ind1, dist2, _ = nn_distance(predict_rmat, gt_rmat) # dist1: BxK, dist2: BxK2
-    grasp_label_mask = end_points['grasp_label_mask']
-    rot_loss = torch.sum(dist2*grasp_label_mask)/(torch.sum(grasp_label_mask)+1e-6)
+    object_label_mask = end_points['object_label_mask']
+    rot_loss = torch.sum(dist2*object_label_mask)/(torch.sum(object_label_mask)+1e-6)
     print('rot_loss', rot_loss)
 
     return rot_loss
@@ -165,12 +165,12 @@ def compute_location_loss(end_points, config):
     objectness_label = end_points['objectness_label'].float()
 
     dist1, ind1, dist2, _ = nn_distance(pred_center, gt_center) # dist1: BxK, dist2: BxK2
-    grasp_label_mask = end_points['grasp_label_mask']
+    object_label_mask = end_points['object_label_mask']
     objectness_label = end_points['objectness_label'].float()
     centroid_reg_loss1 = \
         torch.sum(dist1*objectness_label)/(torch.sum(objectness_label)+1e-6)
     centroid_reg_loss2 = \
-        torch.sum(dist2*grasp_label_mask)/(torch.sum(grasp_label_mask)+1e-6)
+        torch.sum(dist2*object_label_mask)/(torch.sum(object_label_mask)+1e-6)
     center_loss = centroid_reg_loss1 + centroid_reg_loss2
     
     return center_loss
@@ -185,81 +185,6 @@ def compute_sem_cls_loss(end_points, config):
     sem_cls_loss = torch.sum(sem_cls_loss * objectness_label)/(torch.sum(objectness_label)+1e-6)
 
     return sem_cls_loss
-
-
-def compute_grasp_and_sem_cls_loss(end_points, config):
-    """ Compute grasp and semantic classification loss.
-
-    Args:
-        end_points: dict (read-only)
-
-    Returns:
-        center_loss
-        angle_cls_loss
-        angle_reg_loss
-        viewpoint_cls_loss
-        sem_cls_loss
-    """
-
-    num_angle_bin = config.num_angle_bin
-    num_viewpoint = config.num_viewpoint
-    num_class = config.num_class
-
-    object_assignment = end_points['object_assignment']
-    batch_size = object_assignment.shape[0]
-
-    # Compute center loss
-    pred_center = end_points['center']
-    gt_center = end_points['center_label'][:,:,0:3]
-
-    dist1, ind1, dist2, _ = nn_distance(pred_center, gt_center) # dist1: BxK, dist2: BxK2
-    grasp_label_mask = end_points['grasp_label_mask']
-    objectness_label = end_points['objectness_label'].float()
-    centroid_reg_loss1 = \
-        torch.sum(dist1*objectness_label)/(torch.sum(objectness_label)+1e-6)
-    centroid_reg_loss2 = \
-        torch.sum(dist2*grasp_label_mask)/(torch.sum(grasp_label_mask)+1e-6)
-    center_loss = centroid_reg_loss1 + centroid_reg_loss2
-
-    # Compute angle loss (in-plane rotation)
-    angle_class_label = torch.gather(end_points['angle_class_label'], 1, object_assignment) # select (B,K) from (B,K2)
-    criterion_angle_class = nn.CrossEntropyLoss(reduction='none')
-    angle_class_loss = criterion_angle_class(end_points['angle_scores'].transpose(2,1), angle_class_label) # (B,K)
-    angle_class_loss = torch.sum(angle_class_loss * objectness_label)/(torch.sum(objectness_label)+1e-6)
-
-    angle_residual_label = torch.gather(end_points['angle_residual_label'], 1, object_assignment) # select (B,K) from (B,K2)
-    angle_residual_normalized_label = angle_residual_label / (np.pi/num_angle_bin)
-
-    # Ref: https://discuss.pytorch.org/t/convert-int-into-one-hot-format/507/3
-    angle_label_one_hot = torch.cuda.FloatTensor(batch_size, angle_class_label.shape[1], num_angle_bin).zero_()
-    angle_label_one_hot.scatter_(2, angle_class_label.unsqueeze(-1), 1) # src==1 so it's *one-hot* (B,K,num_angle_bin)
-    angle_residual_normalized_loss = huber_loss(torch.sum(end_points['angle_residuals_normalized']*angle_label_one_hot, -1) - angle_residual_normalized_label, delta=1.0) # (B,K)
-    cuong = torch.sum(end_points['angle_residuals_normalized']*angle_label_one_hot, -1)
-    angle_residual_normalized_loss = torch.sum(angle_residual_normalized_loss*objectness_label)/(torch.sum(objectness_label)+1e-6)
-
-    # Compute width loss
-    gt_width = torch.gather(end_points['width_label'], 1, object_assignment) # select (B,K) from (B,K2)
-    width_loss = huber_loss(torch.sum(end_points['width'], -1) - gt_width, delta=1.0)
-    width_loss = torch.sum(width_loss*objectness_label)/(torch.sum(objectness_label)+1e-6)
-
-    # Compute quality loss
-    gt_quality = torch.gather(end_points['quality_label'], 1, object_assignment) # select (B,K) from (B,K2)
-    quality_loss = huber_loss(torch.sum(end_points['quality'], -1) - gt_quality, delta=1.0)
-    quality_loss = torch.sum(quality_loss*objectness_label)/(torch.sum(objectness_label)+1e-6)
-
-    # Compute viewpoint loss
-    viewpoint_class_labell = torch.gather(end_points['viewpoint_class_label'], 1, object_assignment) # select (B,K) from (B,K2)
-    criterion_viewpoint_class = nn.CrossEntropyLoss(reduction='none')
-    viewpoint_class_loss = criterion_viewpoint_class(end_points['viewpoint_scores'].transpose(2,1), viewpoint_class_labell) # (B,K)
-    viewpoint_class_loss = torch.sum(viewpoint_class_loss * objectness_label)/(torch.sum(objectness_label)+1e-6)
-
-    # 3.4 Semantic cls loss
-    sem_cls_label = torch.gather(end_points['sem_cls_label'], 1, object_assignment) # select (B,K) from (B,K2)
-    criterion_sem_cls = nn.CrossEntropyLoss(reduction='none')
-    sem_cls_loss = criterion_sem_cls(end_points['sem_cls_scores'].transpose(2,1), sem_cls_label) # (B,K)
-    sem_cls_loss = torch.sum(sem_cls_loss * objectness_label)/(torch.sum(objectness_label)+1e-6)
-
-    return center_loss, width_loss, quality_loss, angle_class_loss, angle_residual_normalized_loss, viewpoint_class_loss, sem_cls_loss
 
 def get_loss(end_points, config):
     """ Loss functions
@@ -276,7 +201,7 @@ def get_loss(end_points, config):
                 angle_class_label, angle_residual_label,
                 viewpoint_class_labell,
                 sem_cls_label,
-                grasp_label_mask,
+                object_label_mask,
                 vote_label, vote_label_mask
             }
         config: dataset config instance
@@ -293,7 +218,6 @@ def get_loss(end_points, config):
     vote_part_loss = compute_vote_part_loss(end_points)
     end_points['vote_part_loss'] = vote_part_loss
 
-
     # Obj loss
     objectness_loss, objectness_label, objectness_mask, object_assignment = \
         compute_objectness_loss(end_points)
@@ -306,19 +230,6 @@ def get_loss(end_points, config):
         torch.sum(objectness_label.float().cuda())/float(total_num_proposal)
     end_points['neg_ratio'] = \
         torch.sum(objectness_mask.float())/float(total_num_proposal) - end_points['pos_ratio']
-
-    # grasp loss and sem cls loss
-    center_loss, width_loss, quality_loss, angle_cls_loss, angle_reg_loss, viewpoint_cls_loss, sem_cls_loss = \
-        compute_grasp_and_sem_cls_loss(end_points, config)
-    end_points['center_loss'] = center_loss
-    end_points['width_loss'] = width_loss
-    end_points['quality_loss'] = quality_loss
-    end_points['angle_cls_loss'] = angle_cls_loss
-    end_points['angle_reg_loss'] = angle_reg_loss
-    end_points['viewpoint_cls_loss'] = viewpoint_cls_loss
-    end_points['sem_cls_loss'] = sem_cls_loss
-    grasp_loss = center_loss + quality_loss + width_loss + 0.1*angle_cls_loss + angle_reg_loss + 0.1*viewpoint_cls_loss
-    end_points['grasp_loss'] = grasp_loss
 
     # location loss
     loc_loss = compute_location_loss(end_points, config)
