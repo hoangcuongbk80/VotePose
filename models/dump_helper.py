@@ -27,10 +27,10 @@ def dump_results(end_points, dump_dir, config, inference_switch=False):
 
     # NETWORK OUTPUTS
     seed_xyz = end_points['seed_xyz'].detach().cpu().numpy() # (B,num_seed,3)
-    if 'vote_xyz' in end_points:
-        aggregated_vote_xyz = end_points['aggregated_vote_xyz'].detach().cpu().numpy()
-        vote_xyz = end_points['vote_xyz'].detach().cpu().numpy() # (B,num_seed,3)
-        aggregated_vote_xyz = end_points['aggregated_vote_xyz'].detach().cpu().numpy()
+    if 'vote_object_xyz' in end_points:
+        aggregated_vote_object_xyz = end_points['aggregated_vote_object_xyz'].detach().cpu().numpy()
+        vote_object_xyz = end_points['vote_object_xyz'].detach().cpu().numpy() # (B,num_seed,3)
+        aggregated_vote_object_xyz = end_points['aggregated_vote_object_xyz'].detach().cpu().numpy()
     objectness_scores = end_points['objectness_scores'].detach().cpu().numpy() # (B,K,2)
     pred_center = end_points['center'].detach().cpu().numpy() # (B,K,3)
     pred_angle_class = torch.argmax(end_points['angle_scores'], -1) # B,num_proposal
@@ -58,10 +58,10 @@ def dump_results(end_points, dump_dir, config, inference_switch=False):
         # Dump various point clouds
         pc_util.write_ply(pc, os.path.join(dump_dir, '%06d_pc.ply'%(idx_beg+i)))
         pc_util.write_ply(seed_xyz[i,:,:], os.path.join(dump_dir, '%06d_seed_pc.ply'%(idx_beg+i)))
-        if 'vote_xyz' in end_points:
-            pc_util.write_ply(end_points['vote_xyz'][i,:,:], os.path.join(dump_dir, '%06d_vgen_pc.ply'%(idx_beg+i)))
-            pc_util.write_ply(aggregated_vote_xyz[i,:,:], os.path.join(dump_dir, '%06d_aggregated_vote_pc.ply'%(idx_beg+i)))
-            pc_util.write_ply(aggregated_vote_xyz[i,:,:], os.path.join(dump_dir, '%06d_aggregated_vote_pc.ply'%(idx_beg+i)))
+        if 'vote_object_xyz' in end_points:
+            pc_util.write_ply(end_points['vote_object_xyz'][i,:,:], os.path.join(dump_dir, '%06d_vgen_pc.ply'%(idx_beg+i)))
+            pc_util.write_ply(aggregated_vote_object_xyz[i,:,:], os.path.join(dump_dir, '%06d_aggregated_vote_pc.ply'%(idx_beg+i)))
+            pc_util.write_ply(aggregated_vote_object_xyz[i,:,:], os.path.join(dump_dir, '%06d_aggregated_vote_pc.ply'%(idx_beg+i)))
         if np.sum(objectness_prob>DUMP_CONF_THRESH)>0:
             pc_util.write_ply(pred_center[i,objectness_prob>DUMP_CONF_THRESH,0:3], os.path.join(dump_dir, '%06d_confident_proposal_pc.ply'%(idx_beg+i)))
 

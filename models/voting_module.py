@@ -36,8 +36,8 @@ class VotingModule(nn.Module):
             seed_xyz: (batch_size, num_seed, 3) Pytorch tensor
             seed_features: (batch_size, feature_dim, num_seed) Pytorch tensor
         Returns:
-            vote_xyz: (batch_size, num_seed*vote_factor, 3)
-            vote_features: (batch_size, vote_feature_dim, num_seed*vote_factor)
+            vote_object_xyz: (batch_size, num_seed*vote_factor, 3)
+            vote_object_features: (batch_size, vote_feature_dim, num_seed*vote_factor)
         """
         batch_size = seed_xyz.shape[0]
         num_seed = seed_xyz.shape[1]
@@ -48,15 +48,15 @@ class VotingModule(nn.Module):
                 
         net = net.transpose(2,1).view(batch_size, num_seed, self.vote_factor, 3+self.out_dim)
         offset = net[:,:,:,0:3]
-        vote_xyz = seed_xyz.unsqueeze(2) + offset
-        vote_xyz = vote_xyz.contiguous().view(batch_size, num_vote, 3)
+        vote_object_xyz = seed_xyz.unsqueeze(2) + offset
+        vote_object_xyz = vote_object_xyz.contiguous().view(batch_size, num_vote, 3)
         
         residual_features = net[:,:,:,3:] # (batch_size, num_seed, vote_factor, out_dim)
-        vote_features = seed_features.transpose(2,1).unsqueeze(2) + residual_features
-        vote_features = vote_features.contiguous().view(batch_size, num_vote, self.out_dim)
-        vote_features = vote_features.transpose(2,1).contiguous()
+        vote_object_features = seed_features.transpose(2,1).unsqueeze(2) + residual_features
+        vote_object_features = vote_object_features.contiguous().view(batch_size, num_vote, self.out_dim)
+        vote_object_features = vote_object_features.transpose(2,1).contiguous()
         
-        return vote_xyz, vote_features
+        return vote_object_xyz, vote_object_features
  
 if __name__=='__main__':
     net = VotingModule(2, 256).cuda()

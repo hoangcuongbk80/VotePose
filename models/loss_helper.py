@@ -31,7 +31,7 @@ def compute_vote_loss(end_points):
     # Load ground truth votes and assign them to seed points
     batch_size = end_points['seed_xyz'].shape[0]
     num_seed = end_points['seed_xyz'].shape[1] # B,num_seed,3
-    vote_xyz = end_points['vote_xyz'] # B,num_seed*vote_factor,3
+    vote_object_xyz = end_points['vote_object_xyz'] # B,num_seed*vote_factor,3
     seed_inds = end_points['seed_inds'].long() # B,num_seed in [0,num_points-1]
 
     # Get groundtruth votes for the seed points
@@ -45,14 +45,56 @@ def compute_vote_loss(end_points):
     seed_gt_votes += end_points['seed_xyz'].repeat(1,1,GT_VOTE_FACTOR)
 
     # Compute the min of min of distance
-    vote_xyz_reshape = vote_xyz.view(batch_size*num_seed, -1, 3) # from B,num_seed*vote_factor,3 to B*num_seed,vote_factor,3
+    vote_object_xyz_reshape = vote_object_xyz.view(batch_size*num_seed, -1, 3) # from B,num_seed*vote_factor,3 to B*num_seed,vote_factor,3
     seed_gt_votes_reshape = seed_gt_votes.view(batch_size*num_seed, GT_VOTE_FACTOR, 3) # from B,num_seed,3*GT_VOTE_FACTOR to B*num_seed,GT_VOTE_FACTOR,3
     # A predicted vote to no where is not penalized as long as there is a good vote near the GT vote.
-    dist1, _, dist2, _ = nn_distance(vote_xyz_reshape, seed_gt_votes_reshape, l1=True)
+    dist1, _, dist2, _ = nn_distance(vote_object_xyz_reshape, seed_gt_votes_reshape, l1=True)
     votes_dist, _ = torch.min(dist2, dim=1) # (B*num_seed,vote_factor) to (B*num_seed,)
     votes_dist = votes_dist.view(batch_size, num_seed)
     vote_loss = torch.sum(votes_dist*seed_gt_votes_mask.float())/(torch.sum(seed_gt_votes_mask.float())+1e-6)
     return vote_loss
+
+def compute_vote_part_loss(end_points):
+    """ Compute vote loss: Match predicted votes to GT votes.
+
+    Args:
+        end_points: dict (read-only)
+    
+    Returns:
+        vote_loss: scalar Tensor
+            
+    Overall idea:
+        If the seed point belongs to an object (votes_label_mask == 1),
+        then we require it to vote for grasp points of the object.
+        Each seed point may vote for multiple grasps
+    """
+
+    # Load ground truth votes and assign them to seed points
+    batch_size = end_points['seed_xyz'].shape[0]
+    num_seed = end_points['seed_xyz'].shape[1] # B,num_seed,3
+    vote_part_xyz = end_points['vote_part_xyz'] # B,num_seed*vote_factor,3
+    seed_inds = end_points['seed_inds'].long() # B,num_seed in [0,num_points-1]
+
+    # Get groundtruth votes for the seed points
+    # vote_label_mask: Use gather to select B,num_seed from B,num_point
+    #   non-object point has no GT vote mask = 0, object point has mask = 1
+    # vote_label: Use gather to select B,num_seed,9 from B,num_point,9
+    #   with inds in shape B,num_seed,30 and 30 = GT_VOTE_FACTOR * 3
+    seed_gt_votes_mask = torch.gather(end_points['vote_label_mask'], 1, seed_inds)
+    seed_inds_expand = seed_inds.view(batch_size,num_seed,1).repeat(1,1,3*GT_VOTE_FACTOR)
+    seed_gt_votes = torch.gather(end_points['vote_label'], 1, seed_inds_expand)
+    seed_gt_votes += end_points['seed_xyz'].repeat(1,1,GT_VOTE_FACTOR)
+
+    # Compute the min of min of distance
+    vote_part_xyz_reshape = vote_part_xyz.view(batch_size*num_seed, -1, 3) # from B,num_seed*vote_factor,3 to B*num_seed,vote_factor,3
+    seed_gt_votes_reshape = seed_gt_votes.view(batch_size*num_seed, GT_VOTE_FACTOR, 3) # from B,num_seed,3*GT_VOTE_FACTOR to B*num_seed,GT_VOTE_FACTOR,3
+    # A predicted vote to no where is not penalized as long as there is a good vote near the GT vote.
+    dist1, _, dist2, _ = nn_distance(vote_part_xyz_reshape, seed_gt_votes_reshape, l1=True)
+    votes_dist, _ = torch.min(dist2, dim=1) # (B*num_seed,vote_factor) to (B*num_seed,)
+    votes_dist = votes_dist.view(batch_size, num_seed)
+    vote_part_loss = torch.sum(votes_dist*seed_gt_votes_mask.float())/(torch.sum(seed_gt_votes_mask.float())+1e-6)
+    return vote_part_loss
+
 
 def compute_objectness_loss(end_points):
     """ Compute objectness loss for the grasps/proposals.
@@ -68,12 +110,12 @@ def compute_objectness_loss(end_points):
             within [0,num_gt_grasp-1]
     """ 
     # Associate proposal and GT grasps by point-to-point distances
-    aggregated_vote_xyz = end_points['aggregated_vote_xyz']
+    aggregated_vote_object_xyz = end_points['aggregated_vote_object_xyz']
     gt_center = end_points['center_label'][:,:,0:3]
     B = gt_center.shape[0]
-    K = aggregated_vote_xyz.shape[1]
+    K = aggregated_vote_object_xyz.shape[1]
     K2 = gt_center.shape[1]
-    dist1, ind1, dist2, _ = nn_distance(aggregated_vote_xyz, gt_center) # dist1: BxK, dist2: BxK2
+    dist1, ind1, dist2, _ = nn_distance(aggregated_vote_object_xyz, gt_center) # dist1: BxK, dist2: BxK2
 
     # Generate objectness label and mask
     # objectness_label: 1 if pred grasp center is within NEAR_THRESHOLD of any GT grasp
@@ -95,6 +137,10 @@ def compute_objectness_loss(end_points):
     object_assignment = ind1 # (B,K) with values in 0,1,...,K2-1
 
     return objectness_loss, objectness_label, objectness_mask, object_assignment
+
+def compute_rot_loss(end_points, config):
+    rot_loss = 0.1
+    return rot_loss
 
 def compute_grasp_and_sem_cls_loss(end_points, config):
     """ Compute grasp and semantic classification loss.
@@ -175,7 +221,7 @@ def get_loss(end_points, config):
     Args:
         end_points: dict
             {   
-                seed_xyz, seed_inds, vote_xyz,
+                seed_xyz, seed_inds, vote_object_xyz,
                 center,
                 angle_scores, angle_residuals_normalized,
                 viewpoint_scores,
@@ -193,9 +239,14 @@ def get_loss(end_points, config):
         end_points: dict
     """
 
-    # Vote loss
+    # Vote object loss
     vote_loss = compute_vote_loss(end_points)
     end_points['vote_loss'] = vote_loss
+
+    # Vote part loss
+    vote_part_loss = compute_vote_part_loss(end_points)
+    end_points['vote_part_loss'] = vote_part_loss
+
 
     # Obj loss
     objectness_loss, objectness_label, objectness_mask, object_assignment = \
@@ -224,7 +275,9 @@ def get_loss(end_points, config):
     end_points['grasp_loss'] = grasp_loss
 
     # Final loss function
-    loss = vote_loss + 0.5*objectness_loss + grasp_loss + 0.1*sem_cls_loss
+    print('vote_part_loss', vote_part_loss)
+    print('vote_loss', vote_loss)
+    loss = 0.5*vote_loss + 0.5*vote_part_loss + 0.5*objectness_loss + grasp_loss + 0.1*sem_cls_loss
     loss *= 10
     end_points['loss'] = loss
 
