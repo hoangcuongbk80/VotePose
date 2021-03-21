@@ -23,26 +23,26 @@ def decode_scores(net, end_points, num_class, num_angle_bin, num_viewpoint):
     center = base_xyz + net_transposed[:,:,2:5] # (batch_size, num_proposal, 3)
     end_points['center'] = center
 
-    rot_6d = net_transposed[:,:,6:12] # (batch_size, num_proposal, 3)
+    rot_6d = net_transposed[:,:,5:11] # (batch_size, num_proposal, 3)
     end_points['rot_6d'] = rot_6d
 
-    width = net_transposed[:,:,12:13] # (batch_size, num_proposal, 1)
+    width = net_transposed[:,:,11:12] # (batch_size, num_proposal, 1)
     end_points['width'] = width
 
-    quality = net_transposed[:,:,13:14] # (batch_size, num_proposal, 1)
+    quality = net_transposed[:,:,12:13] # (batch_size, num_proposal, 1)
     end_points['quality'] = quality # or grasp quality or grasp score
 
 
-    angle_scores = net_transposed[:,:,14:14+num_angle_bin]
-    angle_residuals_normalized = net_transposed[:,:,14+num_angle_bin:14+num_angle_bin*2]
+    angle_scores = net_transposed[:,:,13:13+num_angle_bin]
+    angle_residuals_normalized = net_transposed[:,:,13+num_angle_bin:13+num_angle_bin*2]
     end_points['angle_scores'] = angle_scores # Bxnum_proposalxnum_angle_bin
     end_points['angle_residuals_normalized'] = angle_residuals_normalized # Bxnum_proposalxnum_angle_bin (should be -1 to 1)
     end_points['angle_residuals'] = angle_residuals_normalized * (np.pi/num_angle_bin) # Bxnum_proposalxnum_angle_bin
 
-    viewpoint_scores = net_transposed[:,:,14+num_angle_bin*2:14+num_angle_bin*2+num_viewpoint]
+    viewpoint_scores = net_transposed[:,:,13+num_angle_bin*2:13+num_angle_bin*2+num_viewpoint]
     end_points['viewpoint_scores'] = viewpoint_scores
 
-    sem_cls_scores = net_transposed[:,:,14+num_angle_bin*2+num_viewpoint:] # Bxnum_proposalx10
+    sem_cls_scores = net_transposed[:,:,13+num_angle_bin*2+num_viewpoint:] # Bxnum_proposalx10
     end_points['sem_cls_scores'] = sem_cls_scores
     return end_points
 

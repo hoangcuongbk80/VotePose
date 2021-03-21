@@ -3,6 +3,8 @@ import torch.nn as nn
 import numpy as np
 import sys
 import os
+import tools
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
@@ -139,8 +141,51 @@ def compute_objectness_loss(end_points):
     return objectness_loss, objectness_label, objectness_mask, object_assignment
 
 def compute_rot_loss(end_points, config):
-    rot_loss = 0.1
+    pred_rot = end_points['rot_6d']
+    predict_rot = pred_rot.reshape(pred_rot.shape[0]*pred_rot.shape[1], pred_rot.shape[2])
+    predict_rmat = tools.compute_rotation_matrix_from_ortho6d(predict_rot)
+    predict_rmat = predict_rmat.reshape(pred_rot.shape[0], pred_rot.shape[1], 9)
+
+    gt_rot = end_points['center_label'][:,:,0:3]
+    gt_rott = gt_rot.reshape(gt_rot.shape[0]*gt_rot.shape[1], gt_rot.shape[2])
+    gt_rmat = tools.compute_rotation_matrix_from_euler(gt_rott)
+    gt_rmat = gt_rmat.reshape(gt_rot.shape[0], gt_rot.shape[1], 9)
+
+    dist1, ind1, dist2, _ = nn_distance(predict_rmat, gt_rmat) # dist1: BxK, dist2: BxK2
+    grasp_label_mask = end_points['grasp_label_mask']
+    rot_loss = torch.sum(dist2*grasp_label_mask)/(torch.sum(grasp_label_mask)+1e-6)
+    print('rot_loss', rot_loss)
+
     return rot_loss
+
+def compute_location_loss(end_points, config):
+    # Compute center loss
+    pred_center = end_points['center']
+    gt_center = end_points['center_label'][:,:,0:3]
+    objectness_label = end_points['objectness_label'].float()
+
+    dist1, ind1, dist2, _ = nn_distance(pred_center, gt_center) # dist1: BxK, dist2: BxK2
+    grasp_label_mask = end_points['grasp_label_mask']
+    objectness_label = end_points['objectness_label'].float()
+    centroid_reg_loss1 = \
+        torch.sum(dist1*objectness_label)/(torch.sum(objectness_label)+1e-6)
+    centroid_reg_loss2 = \
+        torch.sum(dist2*grasp_label_mask)/(torch.sum(grasp_label_mask)+1e-6)
+    center_loss = centroid_reg_loss1 + centroid_reg_loss2
+    
+    return center_loss
+
+def compute_sem_cls_loss(end_points, config):
+    object_assignment = end_points['object_assignment']
+    objectness_label = end_points['objectness_label'].float()
+   
+    sem_cls_label = torch.gather(end_points['sem_cls_label'], 1, object_assignment) # select (B,K) from (B,K2)
+    criterion_sem_cls = nn.CrossEntropyLoss(reduction='none')
+    sem_cls_loss = criterion_sem_cls(end_points['sem_cls_scores'].transpose(2,1), sem_cls_label) # (B,K)
+    sem_cls_loss = torch.sum(sem_cls_loss * objectness_label)/(torch.sum(objectness_label)+1e-6)
+
+    return sem_cls_loss
+
 
 def compute_grasp_and_sem_cls_loss(end_points, config):
     """ Compute grasp and semantic classification loss.
@@ -166,6 +211,7 @@ def compute_grasp_and_sem_cls_loss(end_points, config):
     # Compute center loss
     pred_center = end_points['center']
     gt_center = end_points['center_label'][:,:,0:3]
+
     dist1, ind1, dist2, _ = nn_distance(pred_center, gt_center) # dist1: BxK, dist2: BxK2
     grasp_label_mask = end_points['grasp_label_mask']
     objectness_label = end_points['objectness_label'].float()
@@ -274,10 +320,19 @@ def get_loss(end_points, config):
     grasp_loss = center_loss + quality_loss + width_loss + 0.1*angle_cls_loss + angle_reg_loss + 0.1*viewpoint_cls_loss
     end_points['grasp_loss'] = grasp_loss
 
+    # location loss
+    loc_loss = compute_location_loss(end_points, config)
+
+    # rotation loss
+    rot_loss = compute_rot_loss(end_points, config)
+
+    # semantic loss
+    sem_loss = compute_sem_cls_loss(end_points, config)
+
+
     # Final loss function
-    print('vote_part_loss', vote_part_loss)
-    print('vote_loss', vote_loss)
-    loss = 0.5*vote_loss + 0.5*vote_part_loss + 0.5*objectness_loss + grasp_loss + 0.1*sem_cls_loss
+    #loss = 0.5*vote_loss + 0.5*vote_part_loss + 0.1*rot_loss + 0.5*objectness_loss + grasp_loss + 0.1*sem_cls_loss
+    loss = 0.5*vote_loss + 0.5*vote_part_loss + loc_loss + 0.1*rot_loss + 0.5*objectness_loss + 0.1*sem_loss
     loss *= 10
     end_points['loss'] = loss
 
