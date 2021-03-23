@@ -10,8 +10,8 @@ ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(BASE_DIR)
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 import pc_util
-import ycbgrasp_utils
-from model_util_ycbgrasp import ycbgraspDatasetConfig
+import pose_utils
+from model_util import ycbgraspDatasetConfig
 
 DC = ycbgraspDatasetConfig() # dataset specific config
 MAX_NUM_GRASP = 64

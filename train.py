@@ -98,7 +98,7 @@ def my_worker_init_fn(worker_id):
 if FLAGS.dataset == 'dataset':
     sys.path.append(os.path.join(ROOT_DIR, 'dataset'))
     from dataset import poseVotesDataset, MAX_NUM_GRASP
-    from model_util_ycbgrasp import ycbgraspDatasetConfig
+    from model_util import ycbgraspDatasetConfig
     DATASET_CONFIG = ycbgraspDatasetConfig()
     TRAIN_DATASET = poseVotesDataset('train', num_points=NUM_POINT,
         augment=False,

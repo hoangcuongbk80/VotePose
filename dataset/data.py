@@ -9,7 +9,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 sys.path.append(os.path.join(BASE_DIR, '../utils/'))
 import pc_util
-import ycbgrasp_utils
+import pose_utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--viz', action='store_true', help='Run data visualization.')
@@ -37,12 +37,12 @@ class ycb_object(object):
     def get_pointcloud(self, idx):
         pc_filename = os.path.join(self.pointcloud_dir, '%d.ply'%(idx))
         print(pc_filename)
-        return ycbgrasp_utils.load_pointcloud(pc_filename)
+        return pose_utils.load_pointcloud(pc_filename)
 
     def get_label_objects(self, idx): 
         grasp_filename = os.path.join(self.grasp_dir, '%d.txt'%(idx))
         print(grasp_filename)
-        return ycbgrasp_utils.load_label(grasp_filename, self.num_grasps)
+        return pose_utils.load_label(grasp_filename, self.num_grasps)
 
 def data_viz(data_dir, dump_dir=os.path.join(BASE_DIR, 'data_viz_dump')):
     ''' Examine and visualize ycbgrasp dataset. '''
@@ -64,7 +64,7 @@ def data_viz(data_dir, dump_dir=os.path.join(BASE_DIR, 'data_viz_dump')):
         
     print('Complete!')
     
-def extract_ycbgrasp_data(data_dir, idx_filename, output_folder, num_point=20000,
+def extract_data(data_dir, idx_filename, output_folder, num_point=20000,
     type_whitelist=DEFAULT_TYPE_WHITELIST):
     
     dataset = ycb_object(data_dir)
@@ -91,13 +91,13 @@ def extract_ycbgrasp_data(data_dir, idx_filename, output_folder, num_point=20000
          
             ## Compute gt votes for object center
          
-            object_pc, inds=ycbgrasp_utils.get_object_points(pc, obj.instance_id)
+            object_pc, inds=pose_utils.get_object_points(pc, obj.instance_id)
 
             # Add grasp
             for grp in obj.grasps:
                 grasp = np.zeros((8))
                 grasp[0:6] = np.array([grp[0], grp[1], grp[2], grp[3], grp[4], grp[5]]) # grasp_position
-                grasp[6] = ycbgrasp_utils.type2class[obj.classname] # semantic class id
+                grasp[6] = pose_utils.type2class[obj.classname] # semantic class id
                 grasp_list.append(grasp)           
 
             # Assign first dimension to indicate it belongs an object
@@ -115,7 +115,7 @@ def extract_ycbgrasp_data(data_dir, idx_filename, output_folder, num_point=20000
 
             for part_id in range(0, obj.num_parts):
 
-                part_pc, part_inds=ycbgrasp_utils.get_part_points(pc, part_id)
+                part_pc, part_inds=pose_utils.get_part_points(pc, part_id)
                 part_center = np.mean(part_pc[:,0:3], axis=0)
 
                 # Assign first dimension to indicate it belongs an object
@@ -152,7 +152,7 @@ if __name__=='__main__':
         np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[3:6], fmt='%i')
         
         DATA_DIR = os.path.join(BASE_DIR, 'data')
-        extract_ycbgrasp_data(DATA_DIR, os.path.join(DATA_DIR, 'train_data_idx.txt'),
+        extract_data(DATA_DIR, os.path.join(DATA_DIR, 'train_data_idx.txt'),
             output_folder = os.path.join(DATA_DIR, 'train'), num_point=50000)
-        extract_ycbgrasp_data(DATA_DIR, os.path.join(DATA_DIR, 'val_data_idx.txt'),
+        extract_data(DATA_DIR, os.path.join(DATA_DIR, 'val_data_idx.txt'),
             output_folder = os.path.join(DATA_DIR, 'val'), num_point=50000)
