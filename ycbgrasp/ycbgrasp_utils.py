@@ -15,9 +15,11 @@ class YCBObject(object):
         self.grasps = []
         data = line.split(' ')
         self.classname = data[0]
-        data[1:] = [float(x) for x in data[1:]]
+        data[1:7] = [float(x) for x in data[1:]]
         grasp = [data[1],data[2],data[3],data[4],data[5],data[6]] # x,y,x,rx,ry,rz
         self.grasps.append(grasp)
+        self.instance_id = int(data[7])
+        self.num_parts = int(data[8])
 
 def load_pointcloud(pc_filename):
     pointcloud = pc_util.read_xyzrgb_ply(pc_filename)
@@ -67,8 +69,12 @@ def extract_pc_in_box3d(pc, box3d):
     print(box3d_roi_inds)
     return pc[box3d_roi_inds,:], box3d_roi_inds
 
-def get_object_points(pc, object_name):
-    rgb=pc[:,3]
-    id = type2class[object_name] + 1
-    inds=rgb[:]==id
+def get_object_points(pc, instance_id):
+    g=pc[:,4]
+    inds=g[:]==instance_id
+    return pc[inds,:], inds
+
+def get_part_points(pc, part_id):
+    b=pc[:,5]
+    inds=b[:]==part_id
     return pc[inds,:], inds

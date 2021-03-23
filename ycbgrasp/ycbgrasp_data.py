@@ -83,21 +83,25 @@ def extract_ycbgrasp_data(data_dir, idx_filename, output_folder, num_point=20000
         # Save grasps and votes
         grasp_list = []
         N = pc.shape[0]
-        point_votes = np.zeros((N,31)) # 10 votes and 1 vote mask 10*3+1 
+        point_object_votes = np.zeros((N,31)) # 10 votes and 1 vote mask 10*3+1 
+        point_part_votes = np.zeros((N,31)) # 10 votes and 1 vote mask 10*3+1 
         point_vote_idx = np.zeros((N)).astype(np.int32) # in the range of [0,2]
         indices = np.arange(N)
         for obj in objects:
-            object_pc, inds=ycbgrasp_utils.get_object_points(pc, obj.classname)
-            
+         
+            ## Compute gt votes for object center
+         
+            object_pc, inds=ycbgrasp_utils.get_object_points(pc, obj.instance_id)
+
             # Add grasp
             for grp in obj.grasps:
                 grasp = np.zeros((8))
                 grasp[0:6] = np.array([grp[0], grp[1], grp[2], grp[3], grp[4], grp[5]]) # grasp_position
                 grasp[6] = ycbgrasp_utils.type2class[obj.classname] # semantic class id
-                grasp_list.append(grasp)
-            
+                grasp_list.append(grasp)           
+
             # Assign first dimension to indicate it belongs an object
-            point_votes[inds,0] = 1
+            point_object_votes[inds,0] = 1
             for grasp_idx, grp in enumerate(obj.grasps):
                 grasp_position = np.array([grp[0], grp[1], grp[2]])
                 # Add the votes (all 0 if the point is not in any object's OBB)
@@ -105,9 +109,26 @@ def extract_ycbgrasp_data(data_dir, idx_filename, output_folder, num_point=20000
                 sparse_inds = indices[inds] # turn dense True,False inds to sparse number-wise inds
                 for i in range(len(sparse_inds)):
                     j = sparse_inds[i]
-                    point_votes[j, int(grasp_idx*3+1):int((grasp_idx+1)*3+1)] = votes[i,:]
+                    point_object_votes[j, int(grasp_idx*3+1):int((grasp_idx+1)*3+1)] = votes[i,:]
 
-        np.savez_compressed(os.path.join(output_folder, '%06d_votes.npz'%(data_idx)), point_votes = point_votes)
+            ## Compute gt votes for part center
+
+            for part_id in range(0, obj.num_parts):
+
+                part_pc, part_inds=ycbgrasp_utils.get_part_points(pc, part_id)
+                part_center = np.mean(part_pc[:,0:3], axis=0)
+
+                # Assign first dimension to indicate it belongs an object
+                point_part_votes[inds,0] = 1
+                # Add the votes (all 0 if the point is not in any part's surface)
+                votes = np.expand_dims(part_center,0) - part_pc[:,0:3]
+                sparse_inds = indices[part_inds] # turn dense True,False inds to sparse number-wise inds
+                for i in range(len(sparse_inds)):
+                    j = sparse_inds[i]
+                    point_part_votes[j, 1:4] = votes[i,:]
+
+        np.savez_compressed(os.path.join(output_folder, '%06d_object_votes.npz'%(data_idx)), point_object_votes = point_object_votes)
+        np.savez_compressed(os.path.join(output_folder, '%06d_part_votes.npz'%(data_idx)), point_part_votes = point_part_votes)
         if len(grasp_list)==0:
             grasps = np.zeros((0,8))
         else:
@@ -127,8 +148,8 @@ if __name__=='__main__':
         idxs = np.array(range(0,args.num_sample))
         np.random.seed(0)
         np.random.shuffle(idxs)
-        np.savetxt(os.path.join(BASE_DIR, 'data', 'train_data_idx.txt'), idxs[:20], fmt='%i')
-        np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[20:], fmt='%i')
+        np.savetxt(os.path.join(BASE_DIR, 'data', 'train_data_idx.txt'), idxs[:3], fmt='%i')
+        np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[3:6], fmt='%i')
         
         DATA_DIR = os.path.join(BASE_DIR, 'data')
         extract_ycbgrasp_data(DATA_DIR, os.path.join(DATA_DIR, 'train_data_idx.txt'),
