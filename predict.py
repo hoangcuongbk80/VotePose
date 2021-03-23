@@ -1,4 +1,4 @@
-""" Predict/generate grasps from a point cloud using VoteGrasp.
+""" Estimate object poses from a point cloud using votepose.
 sample usage: python predict.py --input points.ply
 """
 
@@ -10,7 +10,7 @@ import importlib
 import time
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='ycbgrasp', help='Dataset: ycbgrasp [default: ycbgrasp]')
+parser.add_argument('--dataset', default='dataset', help='Dataset: dataset [default: dataset]')
 parser.add_argument('--input', default='points.ply', help='Input: pointcloud [default: points.ply]')
 parser.add_argument('--num_point', type=int, default=50000, help='Point Number [default: 50000]')
 FLAGS = parser.parse_args()
@@ -41,9 +41,9 @@ if __name__=='__main__':
     dump_dir = os.path.join(BASE_DIR, 'pred_result')
     log_dir = os.path.join(BASE_DIR, 'log') 
 
-    if FLAGS.dataset == 'ycbgrasp':
-        sys.path.append(os.path.join(ROOT_DIR, 'ycbgrasp'))
-        from ycbgrasp_dataset import DC # dataset config
+    if FLAGS.dataset == 'dataset':
+        sys.path.append(os.path.join(ROOT_DIR, 'dataset'))
+        from dataset import DC # dataset config
         checkpoint_path = os.path.join(log_dir, 'checkpoint.tar') # trained model path
         pc_path = FLAGS.input
     else:
@@ -51,12 +51,10 @@ if __name__=='__main__':
         exit(-1)
 
     # Init the model and optimzier
-    MODEL = importlib.import_module('votegrasp') # import network module
+    MODEL = importlib.import_module('votepose') # import network module
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = MODEL.VoteGrasp(num_proposal=256, input_feature_dim=1, vote_factor=10,
-        sampling='seed_fps', num_class=DC.num_class,
-        num_angle_bin=DC.num_angle_bin,
-        num_viewpoint=DC.num_viewpoint).to(device)
+    net = MODEL.votepose(num_proposal=256, input_feature_dim=1, vote_factor=10,
+        sampling='seed_fps', num_class=DC.num_class).to(device)
     print('Constructed model.')
     
     # Load checkpoint

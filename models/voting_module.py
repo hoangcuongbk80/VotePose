@@ -38,6 +38,8 @@ class VotingModule(nn.Module):
         Returns:
             vote_object_xyz: (batch_size, num_seed*vote_factor, 3)
             vote_object_features: (batch_size, vote_feature_dim, num_seed*vote_factor)
+            vote_part_xyz: (batch_size, num_seed*vote_factor, 3)
+            vote_part_features: (batch_size, vote_feature_dim, num_seed*vote_factor)
         """
         batch_size = seed_xyz.shape[0]
         num_seed = seed_xyz.shape[1]
@@ -57,9 +59,3 @@ class VotingModule(nn.Module):
         vote_object_features = vote_object_features.transpose(2,1).contiguous()
         
         return vote_object_xyz, vote_object_features
- 
-if __name__=='__main__':
-    net = VotingModule(2, 256).cuda()
-    xyz, features = net(torch.rand(8,1024,3).cuda(), torch.rand(8,256,1024).cuda())
-    print('xyz', xyz.shape)
-    print('features', features.shape)

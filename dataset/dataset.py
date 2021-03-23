@@ -1,4 +1,4 @@
-""" Dataset for grasping on YCB objects. """
+""" Dataset for training VotePose model. """
 
 import os
 import sys
@@ -17,12 +17,12 @@ DC = ycbgraspDatasetConfig() # dataset specific config
 MAX_NUM_GRASP = 64
 MEAN_COLOR_RGB = np.array([0.5,0.5,0.5])
 
-class ycbgraspVotesDataset(Dataset):
+class poseVotesDataset(Dataset):
     def __init__(self, split_set='train', num_points=20000,
         use_color=False, use_height=False, augment=False, scan_idx_list=None):
 
         assert(num_points<=50000)
-        self.data_path = os.path.join(ROOT_DIR, 'ycbgrasp/data/%s'%(split_set))
+        self.data_path = os.path.join(ROOT_DIR, 'dataset/data/%s'%(split_set))
 
         self.scan_names = sorted(list(set([os.path.basename(x)[0:6] \
             for x in os.listdir(self.data_path)])))
@@ -40,9 +40,7 @@ class ycbgraspVotesDataset(Dataset):
         """
         Returns a dict with following keys:
             point_clouds: (N,3+C)
-            center_label: (MAX_NUM_GRASP,3) for GT grasp point XYZ
-            angle_class_label: (MAX_NUM_GRASP,) with int values in 0,...,NUM_ANGLE_BIN-1
-            angle_residual_label: (MAX_NUM_GRASP,)
+            center_label: (MAX_NUM_GRASP,3) for GT grasp point XYZ            
             size_classe_label: (MAX_NUM_GRASP,) with int values in 0,...,NUM_SIZE_CLUSTER
             sem_cls_label: (MAX_NUM_GRASP,) semantic class index
             object_label_mask: (MAX_NUM_GRASP) as 0/1 with 1 indicating a unique grasp
@@ -51,12 +49,13 @@ class ycbgraspVotesDataset(Dataset):
             vote_label_mask: (N,) with 0/1 with 1 indicating the point
                 is in one of the object's OBB.
             scan_idx: int scan index in scan_names list
-            max_gt_grasps: unused
+            max_gt_poses: unused
         """
         scan_name = self.scan_names[idx]
         point_cloud = np.load(os.path.join(self.data_path, scan_name)+'_pc.npz')['pc'] # Nx6
-        grasps = np.load(os.path.join(self.data_path, scan_name)+'_grasp.npy') # K,8
-        point_votes = np.load(os.path.join(self.data_path, scan_name)+'_votes.npz')['point_votes'] # Nx10
+        poses = np.load(os.path.join(self.data_path, scan_name)+'_grasp.npy') # K,8
+        point_votes = np.load(os.path.join(self.data_path, scan_name)+'_object_votes.npz')['point_object_votes'] # Nx10
+        point_part_votes = np.load(os.path.join(self.data_path, scan_name)+'_part_votes.npz')['point_part_votes'] # Nx10
 
         if not self.use_color:
             point_cloud = point_cloud[:,0:3]
@@ -71,32 +70,35 @@ class ycbgraspVotesDataset(Dataset):
 
         # ------------------------------- LABELS ------------------------------
         label_mask = np.zeros((MAX_NUM_GRASP))
-        label_mask[0:grasps.shape[0]] = 1
+        label_mask[0:poses.shape[0]] = 1
 
-        target_grasps_mask = label_mask 
-        target_grasps = np.zeros((MAX_NUM_GRASP, 6))
-        for i in range(grasps.shape[0]):
-            grasp = grasps[i]
-            target_grasp = grasp[0:6]
-            target_grasps[i,:] = target_grasp
+        target_poses_mask = label_mask 
+        target_poses = np.zeros((MAX_NUM_GRASP, 6))
+        for i in range(poses.shape[0]):
+            grasp = poses[i]
+            target_pose = grasp[0:6]
+            target_poses[i,:] = target_pose
 
         point_cloud, choices = pc_util.random_sampling(point_cloud, self.num_points, return_choices=True)
         point_votes_mask = point_votes[choices,0]
         point_votes = point_votes[choices,1:]
 
+        point_part_votes_mask = point_part_votes[choices,0]
+        point_part_votes = point_part_votes[choices,1:]
+
         ret_dict = {}
         ret_dict['point_clouds'] = point_cloud.astype(np.float32)
         ret_dict['vote_label'] = point_votes.astype(np.float32)
-        ret_dict['vote_part_label'] = point_votes.astype(np.float32)
+        ret_dict['vote_part_label'] = point_part_votes.astype(np.float32)
         ret_dict['vote_label_mask'] = point_votes_mask.astype(np.int64)
         ret_dict['scan_idx'] = np.array(idx).astype(np.int64)
 
-        ret_dict['center_label'] = target_grasps.astype(np.float32)[:,0:3]
-        ret_dict['rot_label'] = target_grasps.astype(np.float32)[:,3:6]
+        ret_dict['center_label'] = target_poses.astype(np.float32)[:,0:3]
+        ret_dict['rot_label'] = target_poses.astype(np.float32)[:,3:6]
 
-        target_grasps_semcls = np.zeros((MAX_NUM_GRASP))
-        target_grasps_semcls[0:grasps.shape[0]] = grasps[:,-1]
-        ret_dict['sem_cls_label'] = target_grasps_semcls.astype(np.int64)
-        ret_dict['object_label_mask'] = target_grasps_mask.astype(np.float32)
+        target_poses_semcls = np.zeros((MAX_NUM_GRASP))
+        target_poses_semcls[0:poses.shape[0]] = poses[:,-1]
+        ret_dict['sem_cls_label'] = target_poses_semcls.astype(np.int64)
+        ret_dict['object_label_mask'] = target_poses_mask.astype(np.float32)
         
         return ret_dict

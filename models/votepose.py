@@ -13,32 +13,27 @@ from dump_helper import dump_results
 from loss_helper import get_loss
 
 
-class VoteGrasp(nn.Module):
+class votepose(nn.Module):
     r"""
-        A deep neural network for grasp detection.
+        A deep neural network for 6D object pose estimation.
 
         Parameters
         ----------
         num_class: int
             Number of semantics classes to predict over -- size of softmax classifier
-        num_angle_bin: int
-        num_viewpoint: int
         input_feature_dim: (default: 0)
             Input dim in the feature descriptor for each point.  If the point cloud is Nx9, this
             value should be 6 as in an Nx9 point cloud, 3 of the channels are xyz, and 6 are feature descriptors
         num_proposal: int (default: 128)
-            Number of grasp proposals/detections generated from the network. Each proposal is a grasp with a semantic class.
-        vote_factor: (default: 2)
+            Number of object poses generated from the network. Each proposal is a pose with a semantic class.
+        vote_factor: (default: 1)
             Number of votes generated from each seed point.
     """
 
-    def __init__(self, num_class, num_angle_bin, num_viewpoint,
-        input_feature_dim=0, num_proposal=128, vote_factor=1, sampling='vote_fps'):
+    def __init__(self, num_class, input_feature_dim=0, num_proposal=128, vote_factor=1, sampling='vote_fps'):
         super().__init__()
 
         self.num_class = num_class
-        self.num_angle_bin = num_angle_bin
-        self.num_viewpoint = num_viewpoint
         self.input_feature_dim = input_feature_dim
         self.num_proposal = num_proposal
         self.vote_factor = vote_factor
@@ -51,7 +46,7 @@ class VoteGrasp(nn.Module):
         self.vgen = VotingModule(self.vote_factor, 256)
 
         # Vote aggregation and detection
-        self.pnet = ProposalModule(num_class, num_angle_bin, num_viewpoint, num_proposal, sampling)
+        self.pnet = ProposalModule(num_class, num_proposal, sampling)
 
     def forward(self, inputs):
         """ Forward pass of the network

@@ -12,23 +12,10 @@ from nn_distance import nn_distance, huber_loss
 
 FAR_THRESHOLD = 0.15
 NEAR_THRESHOLD = 0.06
-GT_VOTE_FACTOR = 10 # number of GT votes per point
+GT_VOTE_FACTOR = 10
 OBJECTNESS_CLS_WEIGHTS = [0.2,0.8] # put larger weights on positive objectness
 
-def compute_vote_loss(end_points):
-    """ Compute vote loss: Match predicted votes to GT votes.
-
-    Args:
-        end_points: dict (read-only)
-    
-    Returns:
-        vote_loss: scalar Tensor
-            
-    Overall idea:
-        If the seed point belongs to an object (votes_label_mask == 1),
-        then we require it to vote for grasp points of the object.
-        Each seed point may vote for multiple grasps
-    """
+def compute_vote_object_loss(end_points):
 
     # Load ground truth votes and assign them to seed points
     batch_size = end_points['seed_xyz'].shape[0]
@@ -57,19 +44,6 @@ def compute_vote_loss(end_points):
     return vote_loss
 
 def compute_vote_part_loss(end_points):
-    """ Compute vote loss: Match predicted votes to GT votes.
-
-    Args:
-        end_points: dict (read-only)
-    
-    Returns:
-        vote_loss: scalar Tensor
-            
-    Overall idea:
-        If the seed point belongs to an object (votes_label_mask == 1),
-        then we require it to vote for grasp points of the object.
-        Each seed point may vote for multiple grasps
-    """
 
     # Load ground truth votes and assign them to seed points
     batch_size = end_points['seed_xyz'].shape[0]
@@ -187,32 +161,10 @@ def compute_sem_cls_loss(end_points, config):
     return sem_cls_loss
 
 def get_loss(end_points, config):
-    """ Loss functions
-
-    Args:
-        end_points: dict
-            {   
-                seed_xyz, seed_inds, vote_object_xyz,
-                center,
-                angle_scores, angle_residuals_normalized,
-                viewpoint_scores,
-                sem_cls_scores, #seed_logits,#
-                center_label,
-                angle_class_label, angle_residual_label,
-                viewpoint_class_labell,
-                sem_cls_label,
-                object_label_mask,
-                vote_label, vote_label_mask
-            }
-        config: dataset config instance
-    Returns:
-        loss: pytorch scalar tensor
-        end_points: dict
-    """
 
     # Vote object loss
-    vote_loss = compute_vote_loss(end_points)
-    end_points['vote_loss'] = vote_loss
+    vote_object_loss = compute_vote_object_loss(end_points)
+    end_points['vote_loss'] = vote_object_loss
 
     # Vote part loss
     vote_part_loss = compute_vote_part_loss(end_points)
@@ -242,8 +194,7 @@ def get_loss(end_points, config):
 
 
     # Final loss function
-    #loss = 0.5*vote_loss + 0.5*vote_part_loss + 0.1*rot_loss + 0.5*objectness_loss + grasp_loss + 0.1*sem_cls_loss
-    loss = 0.5*vote_loss + 0.5*vote_part_loss + loc_loss + 0.1*rot_loss + 0.5*objectness_loss + 0.1*sem_loss
+    loss = 0.5*vote_object_loss + 0.5*vote_part_loss + loc_loss + 0.1*rot_loss + 0.5*objectness_loss + 0.1*sem_loss
     loss *= 10
     end_points['loss'] = loss
 

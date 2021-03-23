@@ -1,8 +1,7 @@
 # Data files and directories common
-ycbgrasp/data/
-ycbgrasp/data_viz_dump
+dataset/data/
+dataset/data_viz_dump
 demo_files/
-log_ycbpose/
 log/
 pointnet2/build/
 pointnet2/pointnet2.egg-info/

@@ -73,7 +73,7 @@ def dump_results(end_points, dump_dir, config, inference_switch=False):
 
             for j in range(num_proposal):
                 rmat = predict_rmat[i,j,0:9]
-                for ind, ite in rmat:
+                for ind, ite in enumerate(rmat):
                     str_num = '{:.6f}'.format(ite)
                     f.write(str_num)
                     if (ind+1)%3==0:

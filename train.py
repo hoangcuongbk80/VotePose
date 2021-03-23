@@ -1,7 +1,7 @@
 """ Training for grasp detection with YCB objects.
 
 Sample usage:
-python grasp_train.py --dataset ycbgrasp --log_dir log_ycbgrasp
+python grasp_train.py --dataset dataset --log_dir log
 
 """
 
@@ -27,8 +27,8 @@ from pytorch_utils import BNMomentumScheduler
 from tf_visualizer import Visualizer as TfVisualizer
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', default='votegrasp', help='Model file name [default: votegrasp]')
-parser.add_argument('--dataset', default='ycbgrasp', help='Dataset name. ycbgrasp. [default: ycbgrasp]')
+parser.add_argument('--model', default='votepose', help='Model file name [default: votepose]')
+parser.add_argument('--dataset', default='dataset', help='Dataset name. dataset. [default: dataset]')
 parser.add_argument('--checkpoint_path', default=None, help='Model checkpoint path [default: None]')
 parser.add_argument('--log_dir', default='log', help='Dump dir to save model checkpoint [default: log]')
 parser.add_argument('--dump_dir', default=None, help='Dump dir to save sample outputs [default: None]')
@@ -95,15 +95,15 @@ def my_worker_init_fn(worker_id):
     np.random.seed(np.random.get_state()[1][0] + worker_id)
 
 # Create Dataset and Dataloader
-if FLAGS.dataset == 'ycbgrasp':
-    sys.path.append(os.path.join(ROOT_DIR, 'ycbgrasp'))
-    from ycbgrasp_dataset import ycbgraspVotesDataset, MAX_NUM_GRASP
+if FLAGS.dataset == 'dataset':
+    sys.path.append(os.path.join(ROOT_DIR, 'dataset'))
+    from dataset import poseVotesDataset, MAX_NUM_GRASP
     from model_util_ycbgrasp import ycbgraspDatasetConfig
     DATASET_CONFIG = ycbgraspDatasetConfig()
-    TRAIN_DATASET = ycbgraspVotesDataset('train', num_points=NUM_POINT,
+    TRAIN_DATASET = poseVotesDataset('train', num_points=NUM_POINT,
         augment=False,
         use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
-    TEST_DATASET = ycbgraspVotesDataset('val', num_points=NUM_POINT,
+    TEST_DATASET = poseVotesDataset('val', num_points=NUM_POINT,
         augment=False,
         use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
 else:
@@ -121,11 +121,9 @@ MODEL = importlib.import_module(FLAGS.model) # import network module
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 num_input_channel = int(FLAGS.use_color)*3 + int(not FLAGS.no_height)*1
 
-Detector = MODEL.VoteGrasp
+Detector = MODEL.votepose
 
 net = Detector(num_class=DATASET_CONFIG.num_class,
-               num_angle_bin=DATASET_CONFIG.num_angle_bin,
-               num_viewpoint=DATASET_CONFIG.num_viewpoint,
                num_proposal=FLAGS.num_target,
                input_feature_dim=num_input_channel,
                vote_factor=FLAGS.vote_factor,

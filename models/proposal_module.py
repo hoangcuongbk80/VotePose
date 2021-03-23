@@ -11,7 +11,7 @@ from pointnet2_modules import PointnetSAModuleVotes
 import pointnet2_utils
 from CGNL import SpatialCGNL
 
-def decode_scores(net, end_points, num_class, num_angle_bin, num_viewpoint):
+def decode_scores(net, end_points, num_class):
     net_transposed = net.transpose(2,1) # (batch_size, 1024, ..)
     batch_size = net_transposed.shape[0]
     num_proposal = net_transposed.shape[1]
@@ -23,21 +23,19 @@ def decode_scores(net, end_points, num_class, num_angle_bin, num_viewpoint):
     center = base_xyz + net_transposed[:,:,2:5] # (batch_size, num_proposal, 3)
     end_points['center'] = center
 
-    rot_6d = net_transposed[:,:,5:11] # (batch_size, num_proposal, 3)
+    rot_6d = net_transposed[:,:,5:11] # (batch_size, num_proposal, 6)
     end_points['rot_6d'] = rot_6d
 
-    sem_cls_scores = net_transposed[:,:,11:] # Bxnum_proposalx10
+    sem_cls_scores = net_transposed[:,:,11:] # Bxnum_proposal
     end_points['sem_cls_scores'] = sem_cls_scores
     return end_points
 
 
 class ProposalModule(nn.Module):
-    def __init__(self, num_class, num_angle_bin, num_viewpoint, num_proposal, sampling, seed_feat_dim=256):
+    def __init__(self, num_class, num_proposal, sampling, seed_feat_dim=256):
         super().__init__() 
 
         self.num_class = num_class
-        self.num_angle_bin = num_angle_bin
-        self.num_viewpoint = num_viewpoint
         self.num_proposal = num_proposal
         self.sampling = sampling
         self.seed_feat_dim = seed_feat_dim
@@ -52,26 +50,17 @@ class ProposalModule(nn.Module):
                 normalize_xyz=True
             )
     
-        # Grasp detection/proposal
-        # Objectness-> class (2), center-> residual (3), width-> residual (1), quality(score)-> residual (1)
-        # in-plane rotation-> class+residual (num_angle_bin*2), 
-        # viewpoint-> class (num_viewpoint)
+        # part and object proposal
         self.conv1 = torch.nn.Conv1d(256,128,1)
         self.conv2 = torch.nn.Conv1d(128,128,1)
-        self.conv3 = torch.nn.Conv1d(128,2+3+1+1+num_angle_bin*2+num_viewpoint+self.num_class,1)
+        self.conv3 = torch.nn.Conv1d(128,2+3+6+self.num_class,1)
         self.bn1 = torch.nn.BatchNorm1d(128)
         self.bn2 = torch.nn.BatchNorm1d(128)
         self.sa_object = SpatialCGNL(128, int(128 / 2), use_scale=False, groups=4)
         self.sa_part = SpatialCGNL(128, int(128 / 2), use_scale=False, groups=4)
 
     def forward(self, xyz_object, features_object, xyz_part,  features_part, end_points):
-        """
-        Args:
-            xyz: (B,K,3)
-            features: (B,C,K)
-        Returns:
-            scores: (B,num_proposal,2+3+NH*2+NS*4) 
-        """
+        
         if self.sampling == 'vote_fps':
             # Farthest point sampling (FPS) on votes
             xyz_object, features_object, fps_inds = self.vote_aggregation(xyz_object, features_object)
@@ -126,7 +115,7 @@ class ProposalModule(nn.Module):
         net = torch.cat((net, net_part), 1)
         net = F.relu(self.bn1(self.conv1(net))) 
         net = F.relu(self.bn2(self.conv2(net))) 
-        net = self.conv3(net) # (batch_size, 2+3+1+1+num_angle_bin*2+num_viewpoint+self.num_class, num_proposal)
+        net = self.conv3(net) #
 
-        end_points = decode_scores(net, end_points, self.num_class, self.num_angle_bin, self.num_viewpoint)
+        end_points = decode_scores(net, end_points, self.num_class)
         return end_points
