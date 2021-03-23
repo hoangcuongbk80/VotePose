@@ -128,7 +128,7 @@ if __name__=='__main__':
         np.random.seed(0)
         np.random.shuffle(idxs)
         np.savetxt(os.path.join(BASE_DIR, 'data', 'train_data_idx.txt'), idxs[:20], fmt='%i')
-        np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[10:], fmt='%i')
+        np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[20:], fmt='%i')
         
         DATA_DIR = os.path.join(BASE_DIR, 'data')
         extract_ycbgrasp_data(DATA_DIR, os.path.join(DATA_DIR, 'train_data_idx.txt'),

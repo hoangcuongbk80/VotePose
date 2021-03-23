@@ -70,31 +70,8 @@ class ycbgraspVotesDataset(Dataset):
             point_cloud = np.concatenate([point_cloud, np.expand_dims(height, 1)],1) # (N,4) or (N,7)
 
         # ------------------------------- LABELS ------------------------------
-        grasp_centers = np.zeros((MAX_NUM_GRASP, 3))
-        grasp_sizes = np.zeros((MAX_NUM_GRASP, 3))
-        angle_classes = np.zeros((MAX_NUM_GRASP,))
-        angle_residuals = np.zeros((MAX_NUM_GRASP,))
-        viewpoint_classes = np.zeros((MAX_NUM_GRASP,))
-        widths = np.zeros((MAX_NUM_GRASP,))
-        qualities = np.zeros((MAX_NUM_GRASP,))
         label_mask = np.zeros((MAX_NUM_GRASP))
         label_mask[0:grasps.shape[0]] = 1
-
-        for i in range(grasps.shape[0]):
-            grasp = grasps[i]
-            grasp_center = grasp[0:3]
-            viewpoint_class = grasp[3]
-            angle_class, angle_residual = DC.angle2class(grasp[4])
-            grasp_quality = grasp[5]
-            grasp_width = grasp[6]
-            semantic_class = grasp[7]
-            
-            grasp_centers[i,:] = grasp_center
-            viewpoint_classes[i] = viewpoint_class
-            angle_classes[i] = angle_class
-            angle_residuals[i] = angle_residual
-            qualities[i] = grasp_quality
-            widths[i] = grasp_width
 
         target_grasps_mask = label_mask 
         target_grasps = np.zeros((MAX_NUM_GRASP, 6))
@@ -110,11 +87,12 @@ class ycbgraspVotesDataset(Dataset):
         ret_dict = {}
         ret_dict['point_clouds'] = point_cloud.astype(np.float32)
         ret_dict['vote_label'] = point_votes.astype(np.float32)
+        ret_dict['vote_part_label'] = point_votes.astype(np.float32)
         ret_dict['vote_label_mask'] = point_votes_mask.astype(np.int64)
         ret_dict['scan_idx'] = np.array(idx).astype(np.int64)
 
         ret_dict['center_label'] = target_grasps.astype(np.float32)[:,0:3]
-        ret_dict['rot_label'] = target_grasps.astype(np.float32)[:,0:3]
+        ret_dict['rot_label'] = target_grasps.astype(np.float32)[:,3:6]
 
         target_grasps_semcls = np.zeros((MAX_NUM_GRASP))
         target_grasps_semcls[0:grasps.shape[0]] = grasps[:,-1]
