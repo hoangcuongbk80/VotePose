@@ -194,7 +194,7 @@ def read_xyzrgb_ply(filename):
     """ read XYZ point cloud from filename PLY file """
     plydata = PlyData.read(filename)
     pc = plydata['vertex'].data
-    pc_array = np.array([[x, y, z, r, g, b] for x,y,z,r,g,b in pc if -0.3<x<0.3 and -0.3<y<0.3])
+    pc_array = np.array([[x, y, z, r, g, b] for x,y,z,r,g,b in pc if -1.5<x<1.5 and -1.5<y<1.5])
     return pc_array
 
 def read_ply(filename):

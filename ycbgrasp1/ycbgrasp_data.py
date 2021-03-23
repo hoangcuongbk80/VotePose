@@ -14,20 +14,21 @@ import ycbgrasp_utils
 parser = argparse.ArgumentParser()
 parser.add_argument('--viz', action='store_true', help='Run data visualization.')
 parser.add_argument('--gen_data', action='store_true', help='Generate training dataset.')
-parser.add_argument('--num_sample', type=int, default=33, help='Number of samples [default: 90000]')
+parser.add_argument('--num_sample', type=int, default=10, help='Number of samples [default: 90000]')
 parser.add_argument('--num_grasp', type=int, default=10, help='Number of grasps per objects [default: 10]')
 parser.add_argument('--num_point', type=int, default=50000, help='Point Number [default: 50000]')
 
 args = parser.parse_args()
 
-DEFAULT_TYPE_WHITELIST = ["brick", "bunny", "candlestick", "coffee_cup", "gear", "IPAGearShaft", "IPARingScrew", "pepper", "tless_20", "tless_22", "tless_29"]
+DEFAULT_TYPE_WHITELIST = ['007_tuna_fish_can', '008_pudding_box', '011_banana', '024_bowl', '025_mug', '044_flat_screwdriver',
+                            '051_large_clamp', '055_baseball', '061_foam_brick', '065-h_cups']
 
 class ycb_object(object):
     ''' Load and parse object data '''
     def __init__(self, data_dir):
 
         self.pointcloud_dir = os.path.join(data_dir, 'pointcloud')
-        self.grasp_dir = os.path.join(data_dir, 'pose')
+        self.grasp_dir = os.path.join(data_dir, 'grasp')
         self.num_samples = args.num_sample
         self.num_grasps = args.num_grasp
         
@@ -89,11 +90,17 @@ def extract_ycbgrasp_data(data_dir, idx_filename, output_folder, num_point=20000
         for obj in objects:
             object_pc, inds=ycbgrasp_utils.get_object_points(pc, obj.classname)
             
+            if len(object_pc) < 300:
+                continue
             # Add grasp
             for grp in obj.grasps:
                 grasp = np.zeros((8))
-                grasp[0:6] = np.array([grp[0], grp[1], grp[2], grp[3], grp[4], grp[5]]) # grasp_position
-                grasp[6] = ycbgrasp_utils.type2class[obj.classname] # semantic class id
+                grasp[0:3] = np.array([grp[0], grp[1], grp[2]]) # grasp_position
+                grasp[3] = grp[3] # viewpoint
+                grasp[4] = grp[4] # angle
+                grasp[5] = grp[5] # quality
+                grasp[5] = grp[6] # width
+                grasp[7] = ycbgrasp_utils.type2class[obj.classname] # semantic class id
                 grasp_list.append(grasp)
             
             # Assign first dimension to indicate it belongs an object
@@ -127,8 +134,8 @@ if __name__=='__main__':
         idxs = np.array(range(0,args.num_sample))
         np.random.seed(0)
         np.random.shuffle(idxs)
-        np.savetxt(os.path.join(BASE_DIR, 'data', 'train_data_idx.txt'), idxs[:20], fmt='%i')
-        np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[10:], fmt='%i')
+        np.savetxt(os.path.join(BASE_DIR, 'data', 'train_data_idx.txt'), idxs[:7], fmt='%i')
+        np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[7:], fmt='%i')
         
         DATA_DIR = os.path.join(BASE_DIR, 'data')
         extract_ycbgrasp_data(DATA_DIR, os.path.join(DATA_DIR, 'train_data_idx.txt'),

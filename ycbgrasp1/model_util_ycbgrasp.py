@@ -12,11 +12,12 @@ class ycbgraspDatasetConfig(object):
         self.num_angle_bin = 12
         self.num_viewpoint = 36
 
-        self.type2class={'brick':0, 'bunny':1, 'candlestick':2, 'coffee_cup':3, 'gear':4, 'IPAGearShaft':5,
-                        'IPARingScrew':6, 'pepper':7, 'tless_20':8, 'tless_22':9, 'tless_22-tless_29':10}
+        self.type2class={'007_tuna_fish_can':0, '008_pudding_box':1, '011_banana':2, '024_bowl':3, '025_mug':4,
+                        '044_flat_screwdriver':5, '051_large_clamp':6, '055_baseball':7, '061_foam_brick':8, '065-h_cups':9}
         self.class2type = {self.type2class[t]:t for t in self.type2class}
-        self.type2onehotclass={'brick':0, 'bunny':1, 'candlestick':2, 'coffee_cup':3, 'gear':4, 'IPAGearShaft':5,
-                                'IPARingScrew':6, 'pepper':7, 'tless_20':8, 'tless_22':9, 'tless_29':10}
+        self.type2onehotclass={'007_tuna_fish_can':0, '008_pudding_box':1, '011_banana':2, '024_bowl':3, '025_mug':4,
+                            '044_flat_screwdriver':5, '051_large_clamp':6, '055_baseball':7, '061_foam_brick':8, '065-h_cups':9}
+
     
     def angle2class(self, angle):
         ''' Convert continuous angle to discrete class

@@ -5,19 +5,19 @@ import scipy.io as sio # to load .mat files for depth points
 import pc_util
 import math
 
-type2class={'brick':0, 'bunny':1, 'candlestick':2, 'coffee_cup':3, 'gear':4, 'IPAGearShaft':5,
-            'IPARingScrew':6, 'pepper':7, 'tless_20':8, 'tless_22':9, 'tless_29':10}
-            
+type2class={'007_tuna_fish_can':0, '008_pudding_box':1, '011_banana':2, '024_bowl':3, '025_mug':4, '044_flat_screwdriver':5,
+            '051_large_clamp':6, '055_baseball':7, '061_foam_brick':8, '065-h_cups':9}
 class2type = {type2class[t]:t for t in type2class}
 
 class YCBObject(object):
-    def __init__(self, line):
+    def __init__(self, obj_name, grasp_lines):
         self.grasps = []
-        data = line.split(' ')
-        self.classname = data[0]
-        data[1:] = [float(x) for x in data[1:]]
-        grasp = [data[1],data[2],data[3],data[4],data[5],data[6]] # x,y,x,rx,ry,rz
-        self.grasps.append(grasp)
+        self.classname = obj_name
+        for line in grasp_lines:
+            data = line.split(' ')
+            data[1:] = [float(x) for x in data[1:]]
+            grasp = [data[1],data[2],data[3],data[4],data[5],data[6], data[7]] # grasp_position(3), viewpoint, angle_angle, quality, width
+            self.grasps.append(grasp)
 
 def load_pointcloud(pc_filename):
     pointcloud = pc_util.read_xyzrgb_ply(pc_filename)
@@ -30,9 +30,16 @@ def load_label(grasp_filename, num_grasp):
     objects = []
     for line in lines[1:]:
         data = line.split(' ')
-        obj = YCBObject(line)
-        objects.append(obj)
-
+        if data[0] != obj_name:
+            if obj_name != '':
+                obj = YCBObject(obj_name, grasp_lines)
+                objects.append(obj)
+            obj_name = data[0]
+            grasp_lines = []
+            grasp_lines.append(line)
+        else:
+            if len(grasp_lines) < num_grasp:
+                grasp_lines.append(line)
     return objects
 
 def rotz(t):
