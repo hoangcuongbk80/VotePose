@@ -12,23 +12,7 @@ from proposal_module import ProposalModule
 from dump_helper import dump_results
 from loss_helper import get_loss
 
-
 class votepose(nn.Module):
-    r"""
-        A deep neural network for 6D object pose estimation.
-
-        Parameters
-        ----------
-        num_class: int
-            Number of semantics classes to predict over -- size of softmax classifier
-        input_feature_dim: (default: 0)
-            Input dim in the feature descriptor for each point.  If the point cloud is Nx9, this
-            value should be 6 as in an Nx9 point cloud, 3 of the channels are xyz, and 6 are feature descriptors
-        num_proposal: int (default: 128)
-            Number of object poses generated from the network. Each proposal is a pose with a semantic class.
-        vote_factor: (default: 1)
-            Number of votes generated from each seed point.
-    """
 
     def __init__(self, num_class, input_feature_dim=0, num_proposal=128, vote_factor=1, sampling='vote_fps'):
         super().__init__()
@@ -39,55 +23,43 @@ class votepose(nn.Module):
         self.vote_factor = vote_factor
         self.sampling=sampling
 
-        # Backbone point feature learning
         self.backbone_net = Pointnet2Backbone(input_feature_dim=self.input_feature_dim)
-
-        # Hough voting
         self.vgen = VotingModule(self.vote_factor, 256)
-
-        # Vote aggregation and detection
         self.pnet = ProposalModule(num_class, num_proposal, sampling)
 
     def forward(self, inputs):
-        """ Forward pass of the network
 
-        Args:
-            inputs: dict
-                {point_clouds}  
-
-                point_clouds: Variable(torch.cuda.FloatTensor)
-                    (B, N, 3 + input_channels) tensor
-                    Point cloud to run predicts on
-                    Each point in the point-cloud MUST
-                    be formated as (x, y, z, features...) 
-        Returns:
-            end_points: dict
-        """
+        # --------- Backbone point feature learning ---------
+        
         end_points = {}
         batch_size = inputs['point_clouds'].shape[0]  
-
         end_points = self.backbone_net(inputs['point_clouds'], end_points)
                 
-        # --------- HOUGH VOTING ---------
+        # ---------------- Deep Hough voting ----------------
+        
         xyz = end_points['fp2_xyz']
         features = end_points['fp2_features']   
         end_points['seed_inds'] = end_points['fp2_inds']
         end_points['seed_xyz'] = xyz
         end_points['seed_features'] = features
           
-        # Vote object instance center
+        # --------- Vote object instance center ----------        
+        
         xyz_object, features_object = self.vgen(xyz, features)
         features_norm = torch.norm(features_object, p=2, dim=1)
         features_object = features_object.div(features_norm.unsqueeze(1))
         end_points['vote_object_xyz'] = xyz_object
         end_points['vote_object_features'] = features_object
 
-        # Vote object part center
+        # ----------- Vote object part center -------------        
+        
         xyz_part, features_part = self.vgen(xyz, features)
         features_norm = torch.norm(features_part, p=2, dim=1)
         features_part = features_part.div(features_norm.unsqueeze(1))
         end_points['vote_part_xyz'] = xyz_part
         end_points['vote_part_features'] = features_part
+
+        # --------- Proposal, self-attention and pose estimation ----------
 
         end_points = self.pnet(xyz_object, features_object, xyz_part,  features_part, end_points)
 

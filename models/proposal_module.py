@@ -12,21 +12,21 @@ import pointnet2_utils
 from CGNL import SpatialCGNL
 
 def decode_scores(net, end_points, num_class):
-    net_transposed = net.transpose(2,1) # (batch_size, 1024, ..)
+    net_transposed = net.transpose(2,1)
     batch_size = net_transposed.shape[0]
     num_proposal = net_transposed.shape[1]
 
     objectness_scores = net_transposed[:,:,0:2]
     end_points['objectness_scores'] = objectness_scores
     
-    base_xyz = end_points['aggregated_vote_object_xyz'] # (batch_size, num_proposal, 3)
-    center = base_xyz + net_transposed[:,:,2:5] # (batch_size, num_proposal, 3)
+    base_xyz = end_points['aggregated_vote_object_xyz']
+    center = base_xyz + net_transposed[:,:,2:5]
     end_points['center'] = center
 
-    rot_6d = net_transposed[:,:,5:11] # (batch_size, num_proposal, 6)
+    rot_6d = net_transposed[:,:,5:11]
     end_points['rot_6d'] = rot_6d
 
-    sem_cls_scores = net_transposed[:,:,11:] # Bxnum_proposal
+    sem_cls_scores = net_transposed[:,:,11:]
     end_points['sem_cls_scores'] = sem_cls_scores
     return end_points
 
@@ -40,7 +40,6 @@ class ProposalModule(nn.Module):
         self.sampling = sampling
         self.seed_feat_dim = seed_feat_dim
 
-        # Vote clustering
         self.vote_aggregation = PointnetSAModuleVotes( 
                 npoint=self.num_proposal,
                 radius=0.3,
@@ -50,7 +49,6 @@ class ProposalModule(nn.Module):
                 normalize_xyz=True
             )
     
-        # part and object proposal
         self.conv1 = torch.nn.Conv1d(256,128,1)
         self.conv2 = torch.nn.Conv1d(128,128,1)
         self.conv3 = torch.nn.Conv1d(128,2+3+6+self.num_class,1)
@@ -70,7 +68,6 @@ class ProposalModule(nn.Module):
             sample_inds_part = fps_inds_part
         elif self.sampling == 'seed_fps': 
             # FPS on seed and choose the votes corresponding to the seeds
-            # This gets us a slightly better coverage of *object* votes than vote_fps (which tends to get more cluster votes)
             sample_inds = pointnet2_utils.furthest_point_sample(end_points['seed_xyz'], self.num_proposal)
             xyz_object, features_object, _ = self.vote_aggregation(xyz_object, features_object, sample_inds)
 
@@ -88,11 +85,11 @@ class ProposalModule(nn.Module):
         else:
             log_string('Unknown sampling strategy: %s. Exiting!'%(self.sampling))
             exit()
-        end_points['aggregated_vote_object_xyz'] = xyz_object # (batch_size, num_proposal, 3)
-        end_points['aggregated_vote_inds'] = sample_inds # (batch_size, num_proposal,) # should be 0,1,2,...,num_proposal
+        end_points['aggregated_vote_object_xyz'] = xyz_object
+        end_points['aggregated_vote_inds'] = sample_inds
 
-        end_points['aggregated_vote_part_xyz'] = xyz_part # (batch_size, num_proposal, 3)
-        end_points['aggregated_vote_part_inds'] = sample_inds_part # (batch_size, num_proposal,) # should be 0,1,2,...,num_proposal
+        end_points['aggregated_vote_part_xyz'] = xyz_part
+        end_points['aggregated_vote_part_inds'] = sample_inds_part
 
 
         # --------- VOTE OBJECT CENTER AND SELF-ATTENTION ---------
@@ -115,7 +112,7 @@ class ProposalModule(nn.Module):
         net = torch.cat((net, net_part), 1)
         net = F.relu(self.bn1(self.conv1(net))) 
         net = F.relu(self.bn2(self.conv2(net))) 
-        net = self.conv3(net) #
+        net = self.conv3(net)
 
         end_points = decode_scores(net, end_points, self.num_class)
         return end_points

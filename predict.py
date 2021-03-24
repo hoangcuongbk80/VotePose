@@ -53,7 +53,7 @@ if __name__=='__main__':
     # Init the model and optimzier
     MODEL = importlib.import_module('votepose') # import network module
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = MODEL.votepose(num_proposal=256, input_feature_dim=1, vote_factor=10,
+    net = MODEL.votepose(num_proposal=256, input_feature_dim=1, vote_factor=1,
         sampling='seed_fps', num_class=DC.num_class).to(device)
     print('Constructed model.')
     
