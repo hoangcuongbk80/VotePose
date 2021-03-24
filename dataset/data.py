@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--viz', action='store_true', help='Run data visualization.')
 parser.add_argument('--gen_data', action='store_true', help='Generate training dataset.')
 parser.add_argument('--num_sample', type=int, default=33, help='Number of samples [default: 90000]')
-parser.add_argument('--num_grasp', type=int, default=10, help='Number of grasps per objects [default: 10]')
+parser.add_argument('--num_vote', type=int, default=1, help='Number of vote per object or part [default: 1]')
 parser.add_argument('--num_point', type=int, default=50000, help='Point Number [default: 50000]')
 
 args = parser.parse_args()
@@ -27,9 +27,9 @@ class pose_object(object):
     def __init__(self, data_dir):
 
         self.pointcloud_dir = os.path.join(data_dir, 'pointcloud')
-        self.grasp_dir = os.path.join(data_dir, 'pose')
+        self.pose_dir = os.path.join(data_dir, 'pose')
         self.num_samples = args.num_sample
-        self.num_grasps = args.num_grasp
+        self.num_vote = args.num_vote
         
     def __len__(self):
         return self.num_samples
@@ -40,9 +40,9 @@ class pose_object(object):
         return pose_utils.load_pointcloud(pc_filename)
 
     def get_label_objects(self, idx): 
-        grasp_filename = os.path.join(self.grasp_dir, '%d.txt'%(idx))
-        print(grasp_filename)
-        return pose_utils.load_label(grasp_filename, self.num_grasps)
+        pose_filename = os.path.join(self.pose_dir, '%d.txt'%(idx))
+        print(pose_filename)
+        return pose_utils.load_label(pose_filename, self.num_vote)
     
 def extract_data(data_dir, idx_filename, output_folder, num_point=20000,
     type_whitelist=DEFAULT_TYPE_WHITELIST):
@@ -60,11 +60,11 @@ def extract_data(data_dir, idx_filename, output_folder, num_point=20000,
         pc = dataset.get_pointcloud(data_idx)
         xyz_pc=pc[:,0:3]
         np.savez_compressed(os.path.join(output_folder,'%06d_pc.npz'%(data_idx)), pc=xyz_pc)
-        # Save grasps and votes
-        grasp_list = []
+        # Save poses and votes
+        pose_list = []
         N = pc.shape[0]
-        point_object_votes = np.zeros((N,31)) # 10 votes and 1 vote mask 10*3+1 
-        point_part_votes = np.zeros((N,31)) # 10 votes and 1 vote mask 10*3+1 
+        point_object_votes = np.zeros((N,4)) # 1 votes and 1 vote mask 1*3+1 
+        point_part_votes = np.zeros((N,4)) # 1 votes and 1 vote mask 1*3+1 
         point_vote_idx = np.zeros((N)).astype(np.int32) # in the range of [0,2]
         indices = np.arange(N)
         for obj in objects:
@@ -73,23 +73,23 @@ def extract_data(data_dir, idx_filename, output_folder, num_point=20000,
          
             object_pc, inds=pose_utils.get_object_points(pc, obj.instance_id)
 
-            # Add grasp
-            for grp in obj.grasps:
-                grasp = np.zeros((8))
-                grasp[0:6] = np.array([grp[0], grp[1], grp[2], grp[3], grp[4], grp[5]]) # grasp_position
-                grasp[6] = pose_utils.type2class[obj.classname] # semantic class id
-                grasp_list.append(grasp)           
+            # Add pose
+            for grp in obj.poses:
+                pose = np.zeros((8))
+                pose[0:6] = np.array([grp[0], grp[1], grp[2], grp[3], grp[4], grp[5]]) # pose_position
+                pose[6] = pose_utils.type2class[obj.classname] # semantic class id
+                pose_list.append(pose)           
 
             # Assign first dimension to indicate it belongs an object
             point_object_votes[inds,0] = 1
-            for grasp_idx, grp in enumerate(obj.grasps):
-                grasp_position = np.array([grp[0], grp[1], grp[2]])
+            for pose_idx, grp in enumerate(obj.poses):
+                pose_position = np.array([grp[0], grp[1], grp[2]])
                 # Add the votes (all 0 if the point is not in any object's OBB)
-                votes = np.expand_dims(grasp_position,0) - object_pc[:,0:3]
+                votes = np.expand_dims(pose_position,0) - object_pc[:,0:3]
                 sparse_inds = indices[inds] # turn dense True,False inds to sparse number-wise inds
                 for i in range(len(sparse_inds)):
                     j = sparse_inds[i]
-                    point_object_votes[j, int(grasp_idx*3+1):int((grasp_idx+1)*3+1)] = votes[i,:]
+                    point_object_votes[j, int(pose_idx*3+1):int((pose_idx+1)*3+1)] = votes[i,:]
 
             ## Compute gt votes for part center
 
@@ -109,11 +109,11 @@ def extract_data(data_dir, idx_filename, output_folder, num_point=20000,
 
         np.savez_compressed(os.path.join(output_folder, '%06d_object_votes.npz'%(data_idx)), point_object_votes = point_object_votes)
         np.savez_compressed(os.path.join(output_folder, '%06d_part_votes.npz'%(data_idx)), point_part_votes = point_part_votes)
-        if len(grasp_list)==0:
-            grasps = np.zeros((0,8))
+        if len(pose_list)==0:
+            poses = np.zeros((0,8))
         else:
-            grasps = np.vstack(grasp_list) # (K,8)
-        np.save(os.path.join(output_folder, '%06d_grasp.npy'%(data_idx)), grasps)
+            poses = np.vstack(pose_list) # (K,8)
+        np.save(os.path.join(output_folder, '%06d_pose.npy'%(data_idx)), poses)
 
     return 0
 

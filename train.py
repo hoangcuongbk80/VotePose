@@ -33,7 +33,7 @@ parser.add_argument('--checkpoint_path', default=None, help='Model checkpoint pa
 parser.add_argument('--log_dir', default='log', help='Dump dir to save model checkpoint [default: log]')
 parser.add_argument('--dump_dir', default=None, help='Dump dir to save sample outputs [default: None]')
 parser.add_argument('--num_point', type=int, default=50000, help='Point Number [default: 50000]')
-parser.add_argument('--num_target', type=int, default=256, help='Proposal/grasp number [default: 256]')
+parser.add_argument('--num_target', type=int, default=256, help='Proposal/pose number [default: 256]')
 parser.add_argument('--vote_factor', type=int, default=1, help='Vote factor [default: 10]')
 parser.add_argument('--cluster_sampling', default='vote_fps', help='Sampling strategy for vote clusters: vote_fps, seed_fps, random [default: vote_fps]')
 parser.add_argument('--max_epoch', type=int, default=200, help='Epoch to run [default: 200]')
@@ -97,7 +97,7 @@ def my_worker_init_fn(worker_id):
 # Create Dataset and Dataloader
 if FLAGS.dataset == 'dataset':
     sys.path.append(os.path.join(ROOT_DIR, 'dataset'))
-    from dataset import poseVotesDataset, MAX_NUM_GRASP
+    from dataset import poseVotesDataset, MAX_NUM_POSE
     from model_util import poseDatasetConfig
     DATASET_CONFIG = poseDatasetConfig()
     TRAIN_DATASET = poseVotesDataset('train', num_points=NUM_POINT,

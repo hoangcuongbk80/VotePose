@@ -46,16 +46,16 @@ class poseDatasetConfig(object):
             angle = angle - 2*np.pi
         return angle
 
-    def param2grasp(self, sem_cls, center, viewpoint_class, angle_class, angle_residual, quality, width):
+    def param2pose(self, sem_cls, center, viewpoint_class, angle_class, angle_residual, quality, width):
         angle = self.class2angle(angle_class, angle_residual) * 180/np.pi
         object_name = self.class2type[int(sem_cls)]
-        grasp = []
-        grasp.append(object_name)
-        grasp.append(center[0])
-        grasp.append(center[1])
-        grasp.append(center[2])
-        grasp.append(viewpoint_class)
-        grasp.append(angle)
-        grasp.append(quality)
-        grasp.append(width)
-        return grasp
+        pose = []
+        pose.append(object_name)
+        pose.append(center[0])
+        pose.append(center[1])
+        pose.append(center[2])
+        pose.append(viewpoint_class)
+        pose.append(angle)
+        pose.append(quality)
+        pose.append(width)
+        return pose

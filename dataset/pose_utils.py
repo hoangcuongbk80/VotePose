@@ -12,12 +12,12 @@ class2type = {type2class[t]:t for t in type2class}
 
 class poseObject(object):
     def __init__(self, line):
-        self.grasps = []
+        self.poses = []
         data = line.split(' ')
         self.classname = data[0]
         data[1:7] = [float(x) for x in data[1:]]
-        grasp = [data[1],data[2],data[3],data[4],data[5],data[6]] # x,y,x,rx,ry,rz
-        self.grasps.append(grasp)
+        pose = [data[1],data[2],data[3],data[4],data[5],data[6]] # x,y,x,rx,ry,rz
+        self.poses.append(pose)
         self.instance_id = int(data[7])
         self.num_parts = int(data[8])
 
@@ -25,9 +25,9 @@ def load_pointcloud(pc_filename):
     pointcloud = pc_util.read_xyzrgb_ply(pc_filename)
     return pointcloud
 
-def load_label(grasp_filename, num_grasp):
-    lines = [line.rstrip() for line in open(grasp_filename)]
-    grasp_lines = []
+def load_label(pose_filename, num_pose):
+    lines = [line.rstrip() for line in open(pose_filename)]
+    pose_lines = []
     obj_name = ''
     objects = []
     for line in lines[1:]:
