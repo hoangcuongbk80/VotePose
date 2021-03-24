@@ -69,11 +69,11 @@ class poseVotesDataset(Dataset):
             point_cloud = np.concatenate([point_cloud, np.expand_dims(height, 1)],1) # (N,4) or (N,7)
 
         # ------------------------------- LABELS ------------------------------
-        label_mask = np.zeros((MAX_NUM_pose))
+        label_mask = np.zeros((MAX_NUM_POSE))
         label_mask[0:poses.shape[0]] = 1
 
         target_poses_mask = label_mask 
-        target_poses = np.zeros((MAX_NUM_pose, 6))
+        target_poses = np.zeros((MAX_NUM_POSE, 6))
         for i in range(poses.shape[0]):
             pose = poses[i]
             target_pose = pose[0:6]
@@ -96,7 +96,7 @@ class poseVotesDataset(Dataset):
         ret_dict['center_label'] = target_poses.astype(np.float32)[:,0:3]
         ret_dict['rot_label'] = target_poses.astype(np.float32)[:,3:6]
 
-        target_poses_semcls = np.zeros((MAX_NUM_GRASP))
+        target_poses_semcls = np.zeros((MAX_NUM_POSE))
         target_poses_semcls[0:poses.shape[0]] = poses[:,-1]
         ret_dict['sem_cls_label'] = target_poses_semcls.astype(np.int64)
         ret_dict['object_label_mask'] = target_poses_mask.astype(np.float32)
