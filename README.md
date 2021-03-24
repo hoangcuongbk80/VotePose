@@ -2,7 +2,7 @@
 # Voting and Attention-based Pose Relation Learning for Object Pose Estimation from 3D Point Clouds
 
 ## Introduction
-This repository is code release for our VotePose paper.
+This repository is code release for our paper.
 
 In this repository, we provide implementation of the proposed method (with Pytorch):
 1. Backbone and feature extraction can be found in [models/backbone_module.py](https://github.com/votepose/votepose/blob/master/models/backbone.py)
@@ -35,7 +35,7 @@ Prepare data by running `python dataset/data.py --gen_data`
 
 #### Train
 
-To train a new VotePose model:
+To train a new model:
 
     CUDA_VISIBLE_DEVICES=0 python train.py --dataset dataset --log_dir log
 
