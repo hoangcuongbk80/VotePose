@@ -8,11 +8,11 @@ In this repository, we provide implementation of the proposed method (with Pytor
 1. Backbone and feature extraction can be found in [models/backbone_module.py](https://github.com/votepose/votepose/blob/master/models/backbone.py)
 2. Voting object part centers and learning part-to-part correlation module can be found in [models/votepose.py](https://github.com/votepose/votepose/blob/master/models/votepose.py) and [models/proposal_module.py](https://github.com/votegrasp/votegrasp/blob/master/models/proposal_module.py)
 3. Voting object centers and learning object-to-object correlation module can be found in [models/votepose.py](https://github.com/votegrasp/votegrasp/blob/master/models/votepose.py) and [models/proposal_module.py](https://github.com/votegrasp/votegrasp/blob/master/models/proposal_module.py)
-4. Loss function can found in [models/loss_helper.py](https://github.com/votegrasp/votegrasp/blob/master/models/loss_helper.py)
+4. Multi-task loss function can found in [models/loss_helper.py](https://github.com/votegrasp/votegrasp/blob/master/models/loss_helper.py)
 
 ## Installation
 
-Install [Pytorch](https://pytorch.org/get-started/locally/) and [Tensorflow](https://github.com/tensorflow/tensorflow) (for TensorBoard). It is required that you have access to GPUs. The code is tested with Ubuntu 18.04, Pytorch v1.1, CUDA 10.0 and cuDNN v7.4.
+Install [Pytorch](https://pytorch.org/get-started/locally/). It is required that you have access to GPUs. The code is tested with Ubuntu 18.04, Pytorch v1.1, CUDA 10.0 and cuDNN v7.4.
 
 Compile the CUDA layers for [PointNet++](http://arxiv.org/abs/1706.02413), which we used in the backbone network:
 
