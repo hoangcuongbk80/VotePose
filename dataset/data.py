@@ -112,7 +112,7 @@ def extract_data(data_dir, idx_filename, output_folder, num_point=20000,
         if len(pose_list)==0:
             poses = np.zeros((0,8))
         else:
-            poses = np.vstack(pose_list) # (K,8)
+            poses = np.vstack(pose_list)
         np.save(os.path.join(output_folder, '%06d_pose.npy'%(data_idx)), poses)
 
     return 0

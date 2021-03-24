@@ -92,7 +92,7 @@ class ProposalModule(nn.Module):
         end_points['aggregated_vote_part_inds'] = sample_inds_part
 
 
-        # --------- VOTE OBJECT CENTER AND SELF-ATTENTION ---------
+        # --------- Learning object-to-object correlation with self-attention ---------
 
         feature_dim = features_object.shape[1]
         batch_size = features_object.shape[0]
@@ -100,7 +100,7 @@ class ProposalModule(nn.Module):
         net = self.sa_object(features_object)
         net = net.contiguous().view(batch_size, feature_dim, self.num_proposal)
 
-        # --------- VOTE PART CENTER AND SELF-ATTENTION ---------
+        # --------- Learning part-to-part correlation with self-attention ---------
 
         feature_part_dim = features_part.shape[1]
         features_part = features_part.contiguous().view(batch_size, feature_part_dim, 16, 16)
