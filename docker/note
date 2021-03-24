@@ -2,12 +2,12 @@
 nvidia-docker build --tag votepose ./
 
 # create a container
-nvidia-docker run --name my_votepose -it --rm -v /home/cghg/Votepose/:/Votepose -v /media/DiskStation/trsv/data/ycbpose:/ycbpose_dataset --ipc=host hoangcuongbk80/votepose /bin/bash
+nvidia-docker run --name my_votepose -it --rm -v /home/cghg/Votepose/:/Votepose -v /media/DiskStation/trsv/data/pose_dataset:/pose_dataset --ipc=host hoangcuongbk80/votepose /bin/bash
 
 # training
 cd pointnet2
 python setup.py install
-python train.py --dataset ycbgrasp --log_dir log_ycbpose
+python train.py --dataset dataset --log_dir log
 
 # testing
 python predict.py

@@ -11,9 +11,9 @@ sys.path.append(BASE_DIR)
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 import pc_util
 import pose_utils
-from model_util import ycbgraspDatasetConfig
+from model_util import poseDatasetConfig
 
-DC = ycbgraspDatasetConfig() # dataset specific config
+DC = poseDatasetConfig() # dataset specific config
 MAX_NUM_GRASP = 64
 MEAN_COLOR_RGB = np.array([0.5,0.5,0.5])
 

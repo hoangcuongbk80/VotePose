@@ -6,7 +6,7 @@ sys.path.append(BASE_DIR)
 ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 
-class ycbgraspDatasetConfig(object):
+class poseDatasetConfig(object):
     def __init__(self):
         self.num_class = 10
         self.num_angle_bin = 12

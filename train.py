@@ -1,7 +1,7 @@
-""" Training for grasp detection with YCB objects.
+""" 
 
 Sample usage:
-python grasp_train.py --dataset dataset --log_dir log
+python train.py --dataset dataset --log_dir log
 
 """
 
@@ -98,8 +98,8 @@ def my_worker_init_fn(worker_id):
 if FLAGS.dataset == 'dataset':
     sys.path.append(os.path.join(ROOT_DIR, 'dataset'))
     from dataset import poseVotesDataset, MAX_NUM_GRASP
-    from model_util import ycbgraspDatasetConfig
-    DATASET_CONFIG = ycbgraspDatasetConfig()
+    from model_util import poseDatasetConfig
+    DATASET_CONFIG = poseDatasetConfig()
     TRAIN_DATASET = poseVotesDataset('train', num_points=NUM_POINT,
         augment=False,
         use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))

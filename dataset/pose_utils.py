@@ -10,7 +10,7 @@ type2class={'brick':0, 'bunny':1, 'candlestick':2, 'coffee_cup':3, 'gear':4, 'IP
             
 class2type = {type2class[t]:t for t in type2class}
 
-class YCBObject(object):
+class poseObject(object):
     def __init__(self, line):
         self.grasps = []
         data = line.split(' ')
@@ -32,7 +32,7 @@ def load_label(grasp_filename, num_grasp):
     objects = []
     for line in lines[1:]:
         data = line.split(' ')
-        obj = YCBObject(line)
+        obj = poseObject(line)
         objects.append(obj)
 
     return objects
