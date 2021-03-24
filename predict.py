@@ -1,4 +1,4 @@
-""" Estimate object poses from a point cloud using votepose.
+""" 
 sample usage: python predict.py --input points.ply
 """
 

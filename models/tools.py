@@ -3,8 +3,6 @@ import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
 
-
-    
 #rotation5d batch*5
 def normalize_5d_rotation( r5d):
     batch = r5d.shape[0]
@@ -299,8 +297,6 @@ def get_44_rotation_matrix_from_33_rotation_matrix(m):
     out=torch.cat((m43, col4), 2) #batch*4*4
     
     return out
-    
-    
 
 #matrices batch*3*3
 #both matrix are orthogonal rotation matrices
@@ -443,22 +439,4 @@ def compute_quaternions_from_axisAngles(self, axisAngles):
     quat = torch.cat((w.view(-1,1), x.view(-1,1), y.view(-1,1), z.view(-1,1)), 1)
     
     return quat
-
-#quaternions batch*4, 
-#matrices batch*4*4 or batch*3*3
-def compute_quaternions_from_rotation_matrices(matrices):
-    batch=matrices.shape[0]
-    
-    w=torch.sqrt(1.0 + matrices[:,0,0] + matrices[:,1,1] + matrices[:,2,2]) / 2.0
-    w = torch.max (w , torch.autograd.Variable(torch.zeros(batch).cuda())+1e-8) #batch
-    w4 = 4.0 * w;
-    x= (matrices[:,2,1] - matrices[:,1,2]) / w4 ;
-    y= (matrices[:,0,2] - matrices[:,2,0]) / w4 ;
-    z= (matrices[:,1,0] - matrices[:,0,1]) / w4 ;
-        
-    quats = torch.cat( (w.view(batch,1), x.view(batch, 1),y.view(batch, 1), z.view(batch, 1) ), 1   )
-        
-    return quats
-    
-    
     

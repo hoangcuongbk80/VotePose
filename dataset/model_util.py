@@ -19,14 +19,7 @@ class poseDatasetConfig(object):
                                 'IPARingScrew':6, 'pepper':7, 'tless_20':8, 'tless_22':9, 'tless_29':10}
     
     def angle2class(self, angle):
-        ''' Convert continuous angle to discrete class
-            [optinal] also small regression number from  
-            class center angle to current angle.
-           
-            angle is from 0-2pi (or -pi~pi), class center at 0, 1*(2pi/N), 2*(2pi/N) ...  (N-1)*(2pi/N)
-            return is class of int32 of 0,1,...,N-1 and a number such that
-                class*(2pi/N) + number = angle
-        '''
+        
         num_class = self.num_angle_bin
         angle = angle%(2*np.pi)
         assert(angle>=0 and angle<=2*np.pi)
@@ -37,7 +30,7 @@ class poseDatasetConfig(object):
         return class_id, residual_angle
     
     def class2angle(self, pred_cls, residual, to_label_format=True):
-        ''' Inverse function to angle2class '''
+
         num_class = self.num_angle_bin
         angle_per_class = 2*np.pi/float(num_class)
         angle_center = pred_cls * angle_per_class

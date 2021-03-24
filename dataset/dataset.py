@@ -1,10 +1,8 @@
-""" Dataset for training VotePose model. """
-
 import os
 import sys
 import numpy as np
 from torch.utils.data import Dataset
-import scipy.io as sio # to load .mat files for depth points
+import scipy.io as sio
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(BASE_DIR)
@@ -13,7 +11,7 @@ import pc_util
 import pose_utils
 from model_util import poseDatasetConfig
 
-DC = poseDatasetConfig() # dataset specific config
+DC = poseDatasetConfig()
 MAX_NUM_POSE = 64
 MEAN_COLOR_RGB = np.array([0.5,0.5,0.5])
 
@@ -37,25 +35,12 @@ class poseVotesDataset(Dataset):
         return len(self.scan_names)
 
     def __getitem__(self, idx):
-        """
-        Returns a dict with following keys:
-            point_clouds: (N,3+C)
-            center_label: (MAX_NUM_POSE,3) for GT pose point XYZ            
-            size_classe_label: (MAX_NUM_POSE,) with int values in 0,...,NUM_SIZE_CLUSTER
-            sem_cls_label: (MAX_NUM_POSE,) semantic class index
-            object_label_mask: (MAX_NUM_POSE) as 0/1 with 1 indicating a unique pose
-            vote_label: (N,9) with votes XYZ (3 votes: X1Y1Z1, X2Y2Z2, X3Y3Z3)
-                if there is only one vote than X1==X2==X3 etc.
-            vote_label_mask: (N,) with 0/1 with 1 indicating the point
-                is in one of the object's OBB.
-            scan_idx: int scan index in scan_names list
-            max_gt_poses: unused
-        """
+
         scan_name = self.scan_names[idx]
-        point_cloud = np.load(os.path.join(self.data_path, scan_name)+'_pc.npz')['pc'] # Nx6
-        poses = np.load(os.path.join(self.data_path, scan_name)+'_pose.npy') # K,8
-        point_votes = np.load(os.path.join(self.data_path, scan_name)+'_object_votes.npz')['point_object_votes'] # Nx10
-        point_part_votes = np.load(os.path.join(self.data_path, scan_name)+'_part_votes.npz')['point_part_votes'] # Nx10
+        point_cloud = np.load(os.path.join(self.data_path, scan_name)+'_pc.npz')['pc'] 
+        poses = np.load(os.path.join(self.data_path, scan_name)+'_pose.npy')
+        point_votes = np.load(os.path.join(self.data_path, scan_name)+'_object_votes.npz')['point_object_votes'] 
+        point_part_votes = np.load(os.path.join(self.data_path, scan_name)+'_part_votes.npz')['point_part_votes']
 
         if not self.use_color:
             point_cloud = point_cloud[:,0:3]
@@ -66,7 +51,7 @@ class poseVotesDataset(Dataset):
         if self.use_height:
             floor_height = np.percentile(point_cloud[:,2],0.99)
             height = point_cloud[:,2] - floor_height
-            point_cloud = np.concatenate([point_cloud, np.expand_dims(height, 1)],1) # (N,4) or (N,7)
+            point_cloud = np.concatenate([point_cloud, np.expand_dims(height, 1)],1)
 
         # ------------------------------- LABELS ------------------------------
         label_mask = np.zeros((MAX_NUM_POSE))

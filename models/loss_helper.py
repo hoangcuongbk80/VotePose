@@ -56,7 +56,7 @@ def compute_vote_part_loss(end_points):
     seed_gt_votes_reshape = seed_gt_votes.view(batch_size*num_seed, GT_VOTE_FACTOR, 3)
     # A predicted vote to no where is not penalized as long as there is a good vote near the GT vote.
     dist1, _, dist2, _ = nn_distance(vote_part_xyz_reshape, seed_gt_votes_reshape, l1=True)
-    votes_dist, _ = torch.min(dist2, dim=1) # (B*num_seed,vote_factor) to (B*num_seed,)
+    votes_dist, _ = torch.min(dist2, dim=1) 
     votes_dist = votes_dist.view(batch_size, num_seed)
     vote_part_loss = torch.sum(votes_dist*seed_gt_votes_mask.float())/(torch.sum(seed_gt_votes_mask.float())+1e-6)
     return vote_part_loss
@@ -172,7 +172,6 @@ def get_loss(end_points, config):
 
     # semantic loss
     sem_loss = compute_sem_cls_loss(end_points, config)
-
 
     # Final loss function
     loss = 0.5*vote_object_loss + 0.5*vote_part_loss + loc_loss + 0.1*rot_loss + 0.5*objectness_loss + 0.1*sem_loss

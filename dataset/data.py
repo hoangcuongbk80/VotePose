@@ -128,8 +128,8 @@ if __name__=='__main__':
         idxs = np.array(range(0,args.num_sample))
         np.random.seed(0)
         np.random.shuffle(idxs)
-        np.savetxt(os.path.join(BASE_DIR, 'data', 'train_data_idx.txt'), idxs[:3], fmt='%i')
-        np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[3:6], fmt='%i')
+        np.savetxt(os.path.join(BASE_DIR, 'data', 'train_data_idx.txt'), idxs[:22], fmt='%i')
+        np.savetxt(os.path.join(BASE_DIR, 'data', 'val_data_idx.txt'), idxs[22:], fmt='%i')
         
         DATA_DIR = os.path.join(BASE_DIR, 'data')
         extract_data(DATA_DIR, os.path.join(DATA_DIR, 'train_data_idx.txt'),
