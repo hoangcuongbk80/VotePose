@@ -1,5 +1,5 @@
 # Data files and directories common
-dataset/data/
+#dataset/data/
 dataset/data_viz_dump
 pred_result/
 demo_files/
