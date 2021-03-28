@@ -49,7 +49,7 @@ While training you can check the `log/log_train.txt` file on its progress.
 ## Create and Train on your own data
 
 ## Dataset and trained model
-Please find more information on [our website](https://sites.google.com/view/votepose).
+Will be available after our paper has been published.
 
 ## Acknowledgements
 Will be available after our paper has been published.
