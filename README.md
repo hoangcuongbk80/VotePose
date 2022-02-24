@@ -1,7 +1,7 @@
 
 # Voting and Attention-based Pose Relation Learning for Object Pose Estimation from 3D Point Clouds
 
-# [Video](https://iliad-project.eu)
+## [Video](https://www.youtube.com/watch?v=VHo3vSEYjeM)
 
 ## Introduction
 This repository is code release for our paper.
