@@ -1,0 +1,13 @@
+# Build an docker image
+nvidia-docker build --tag votepose ./
+
+# create a container
+nvidia-docker run --name my_votepose -it --rm -v /home/cghg/VotePose/:/VotePose -v /media/DiskStation/trsv/data:/data --ipc=host hoangcuongbk80/votegrasp /bin/bash
+
+# training
+cd pointnet2
+python setup.py install
+python train.py --dataset dataset --log_dir log
+
+# testing
+python predict.py

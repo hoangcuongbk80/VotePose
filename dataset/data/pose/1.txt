@@ -1,0 +1,2 @@
+object_name x y z rx ry rz instance_id num_parts
+gear 0.187 0.173 0.042 3.13859 -0.00299878 2.10109 2 2

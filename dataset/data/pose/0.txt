@@ -1,0 +1,1 @@
+object_name x y z rx ry rz instance_id num_parts
