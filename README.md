@@ -1,5 +1,5 @@
 
-# Voting and Attention-based Pose Relation Learning for Object Pose Estimation from 3D Point Clouds
+# VotePose
 
 ## [Video](https://youtu.be/VHo3vSEYjeM)
 
