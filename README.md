@@ -1,20 +1,7 @@
 
-# VotePose
-
-## [Video](https://youtu.be/VHo3vSEYjeM)
-
-## Introduction
-This repository is code release for our paper.
-
-In this repository, we provide implementation of the proposed method (with Pytorch):
-1. Backbone and feature extraction can be found in [models/backbone_module.py](https://github.com/votepose/votepose/blob/master/models/backbone.py)
-2. Voting object part centers and learning part-to-part correlation module can be found in [models/votepose.py](https://github.com/votepose/votepose/blob/master/models/votepose.py) and [models/proposal_module.py](https://github.com/votegrasp/votegrasp/blob/master/models/proposal_module.py)
-3. Voting object centers and learning object-to-object correlation module can be found in [models/votepose.py](https://github.com/votegrasp/votegrasp/blob/master/models/votepose.py) and [models/proposal_module.py](https://github.com/votegrasp/votegrasp/blob/master/models/proposal_module.py)
-4. Multi-task loss function can found in [models/loss_helper.py](https://github.com/votegrasp/votegrasp/blob/master/models/loss_helper.py)
-
 ## Installation
 
-Install [Pytorch](https://pytorch.org/get-started/locally/). It is required that you have access to GPUs. The code is tested with Ubuntu 18.04, Pytorch v1.1, CUDA 10.0 and cuDNN v7.4.
+Install [Pytorch](https://pytorch.org/get-started/locally/). You'll need to have access to GPUs. The code is tested with Ubuntu 18.04, Pytorch v1.1, CUDA 10.0, and cuDNN v7.4.
 
 Compile the CUDA layers for [PointNet++](http://arxiv.org/abs/1706.02413), which we used in the backbone network:
 
@@ -41,7 +28,7 @@ To train a new model:
 
     CUDA_VISIBLE_DEVICES=0 python train.py --dataset dataset --log_dir log
 
-You can use `CUDA_VISIBLE_DEVICES=0,1,2` to specify which GPU(s) to use. Without specifying CUDA devices, the training will use all the available GPUs and train with data parallel (Note that due to I/O load, training speedup is not linear to the nubmer of GPUs used). Run `python train.py -h` to see more training options.
+You can use `CUDA_VISIBLE_DEVICES=0,1,2` to specify which GPU(s) to use. Without specifying CUDA devices, the training will use all the available GPUs and train with data parallel (Note that due to I/O load, training speedup is not linear to the number of GPUs used). Run `python train.py -h` to see more training options.
 While training you can check the `log/log_train.txt` file on its progress.
 
 #### Run predict
