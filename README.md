@@ -35,21 +35,5 @@ While training you can check the `log/log_train.txt` file on its progress.
 
     python predict.py
 
-## Citations
-
-```
-@article{hoang2022voting,
-  title={Voting and attention-based pose relation learning for object pose estimation from 3d point clouds},
-  author={Hoang, Dinh-Cuong and Stork, Johannes A and Stoyanov, Todor},
-  journal={IEEE Robotics and Automation Letters},
-  volume={7},
-  number={4},
-  pages={8980--8987},
-  year={2022},
-  publisher={IEEE}
-}
-
-```
-
 ## License
 Licensed under the [MIT License](LICENSE)
